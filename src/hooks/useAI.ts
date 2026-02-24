@@ -1,29 +1,13 @@
 // ============================================
 // USE AI HOOK
-// Zarządzanie połączeniem z Google GenAI
+// Zarządzanie połączeniem z Google Generative AI (Stabilna wersja)
 // ============================================
 
 import { useState, useCallback } from 'react';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { AI_MODELS } from '../config/constants';
 import { retryOperation, isBillingError } from '../utils/retry';
 import type { ProcessedImage } from '../types';
-
-// Types for Google GenAI responses
-interface GenerateContentResponse {
-  text?: string;
-  candidates?: Array<{
-    content?: {
-      parts?: Array<{
-        text?: string;
-        inlineData?: {
-          mimeType: string;
-          data: string;
-        };
-      }>;
-    };
-  }>;
-}
 
 interface UseAIOptions {
   onError?: (error: Error) => void;
@@ -34,12 +18,12 @@ export const useAI = (options: UseAIOptions = {}) => {
   const [status, setStatus] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
-  const getAI = useCallback((): GoogleGenAI => {
+  const getAI = useCallback((): GoogleGenerativeAI => {
     const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new Error('Brak klucza API. Skonfiguruj GEMINI_API_KEY.');
     }
-    return new GoogleGenAI({ apiKey, apiVersion: 'v1beta' });
+    return new GoogleGenerativeAI(apiKey);
   }, []);
 
   /**
@@ -55,40 +39,30 @@ export const useAI = (options: UseAIOptions = {}) => {
     setStatus('Analiza zdjęć i generowanie opisu...');
 
     try {
-      const ai = getAI();
+      const genAI = getAI();
+      const model = genAI.getGenerativeModel({ 
+        model: AI_MODELS.TEXT,
+        systemInstruction: systemPrompt
+      });
       
       const contentParts: any[] = images.map(img => ({
         inlineData: { mimeType: img.mimeType, data: img.data }
       }));
       contentParts.push({ text: `Generate Best Seller Listing for: ${productName}` });
 
-      const response = await retryOperation<GenerateContentResponse>(
-        () => ai.models.generateContent({
-          model: AI_MODELS.TEXT,
-          contents: { parts: contentParts },
-          config: {
-            system_instruction: systemPrompt,
-            response_mime_type: 'application/json'
-          }
-        }) as Promise<GenerateContentResponse>,
+      const result = await retryOperation(
+        () => model.generateContent(contentParts),
         {
           maxRetries: 3,
           delay: 2000,
           onRetry: (attempt) => {
             setStatus(`Ponawianie próby ${attempt}/3...`);
-          },
-          fallbackOperation: () => ai.models.generateContent({
-            model: AI_MODELS.PRO_ANALYSIS,
-            contents: { parts: contentParts },
-            config: {
-              system_instruction: systemPrompt,
-              response_mime_type: 'application/json'
-            }
-          }) as Promise<GenerateContentResponse>
+          }
         }
       );
 
-      let jsonText = response.text || '';
+      const response = await result.response;
+      let jsonText = response.text();
       
       // Clean up markdown if present
       jsonText = jsonText.replace(/```json/g, '').replace(/```/g, '').trim();
@@ -112,7 +86,7 @@ export const useAI = (options: UseAIOptions = {}) => {
   }, [getAI, options]);
 
   /**
-   * Generate mockup image
+   * Generate mockup image (Legacy/Placeholder if not supported by model)
    */
   const generateMockup = useCallback(async (
     systemPrompt: string,
@@ -125,7 +99,11 @@ export const useAI = (options: UseAIOptions = {}) => {
     setStatus('Generowanie mockupu...');
 
     try {
-      const ai = getAI();
+      const genAI = getAI();
+      const model = genAI.getGenerativeModel({ 
+        model: AI_MODELS.IMAGE_GENERATION,
+        systemInstruction: systemPrompt
+      });
       
       const parts: any[] = [];
       parts.push({ inlineData: { mimeType: productImage.mimeType, data: productImage.data } });
@@ -135,36 +113,25 @@ export const useAI = (options: UseAIOptions = {}) => {
       }
       parts.push({ text: userPrompt });
 
-      const response = await retryOperation<GenerateContentResponse>(
-        () => ai.models.generateContent({
-          model: AI_MODELS.IMAGE_GENERATION,
-          contents: { parts },
-          config: {
-            system_instruction: systemPrompt,
-            response_modalities: ['image', 'text']
-          }
-        }) as Promise<GenerateContentResponse>,
+      const result = await retryOperation(
+        () => model.generateContent(parts),
         {
           maxRetries: 3,
           delay: 2000,
           onRetry: (attempt) => {
             setStatus(attempt > 3 ? 'Przełączanie na model zapasowy...' : `Serwer zajęty, ponawianie (${attempt}/3)...`);
-          },
-          fallbackOperation: () => ai.models.generateContent({
-            model: AI_MODELS.IMAGE_FALLBACK,
-            contents: { parts },
-            config: {
-              system_instruction: systemPrompt
-            }
-          }) as Promise<GenerateContentResponse>
+          }
         }
       );
 
-      // Extract image from response
+      const response = await result.response;
+      // Note: Standard Generative AI SDK might not support image output in the same way as Flash 2.0 Exp.
+      // We will try to extract it if it's there.
+      const candidate = response.candidates?.[0];
       let imageUrl: string | null = null;
       
-      if (response.candidates?.[0]?.content?.parts) {
-        for (const part of response.candidates[0].content.parts) {
+      if (candidate?.content?.parts) {
+        for (const part of candidate.content.parts) {
           if (part.inlineData) {
             imageUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
             break;
@@ -173,7 +140,7 @@ export const useAI = (options: UseAIOptions = {}) => {
       }
 
       if (!imageUrl) {
-        throw new Error('Nie udało się wygenerować obrazu - brak danych w odpowiedzi');
+        throw new Error('Ten model nie zwrócił obrazu. Upewnij się, że używasz modelu wspierającego generowanie obrazów.');
       }
 
       setStatus('');
@@ -197,20 +164,20 @@ export const useAI = (options: UseAIOptions = {}) => {
     setStatus('Ponowna analiza...');
 
     try {
-      const ai = getAI();
+      const genAI = getAI();
+      const model = genAI.getGenerativeModel({ 
+        model: AI_MODELS.TEXT,
+        systemInstruction: systemPrompt
+      });
       
-      const response = await retryOperation<GenerateContentResponse>(
-        () => ai.models.generateContent({
-          model: AI_MODELS.TEXT,
-          contents: 'Audit my changes.',
-          config: {
-            system_instruction: systemPrompt,
-            response_mime_type: 'application/json'
-          }
-        }) as Promise<GenerateContentResponse>
+      const result = await retryOperation(
+        () => model.generateContent('Audit my changes.'),
+        { maxRetries: 3, delay: 2000 }
       );
 
-      let jsonText = response.text || '';
+      const response = await result.response;
+      let jsonText = response.text();
+      
       jsonText = jsonText.replace(/```json/g, '').replace(/```/g, '').trim();
       const startIndex = jsonText.indexOf('{');
       const endIndex = jsonText.lastIndexOf('}');
@@ -232,7 +199,7 @@ export const useAI = (options: UseAIOptions = {}) => {
   }, [getAI, options]);
 
   /**
-   * Generate empty background for mockup
+   * Generate empty background (Placeholder)
    */
   const generateEmptyBackground = useCallback(async (prompt: string): Promise<string> => {
     setIsLoading(true);
@@ -240,29 +207,17 @@ export const useAI = (options: UseAIOptions = {}) => {
     setStatus('Generowanie tła...');
 
     try {
-      const ai = getAI();
+      const genAI = getAI();
+      const model = genAI.getGenerativeModel({ model: AI_MODELS.IMAGE_GENERATION });
       
-      const response = await retryOperation<GenerateContentResponse>(
-        () => ai.models.generateContent({
-          model: AI_MODELS.IMAGE_GENERATION,
-          contents: prompt,
-          config: {
-            response_modalities: ['image', 'text']
-          }
-        }) as Promise<GenerateContentResponse>,
-        {
-          maxRetries: 3,
-          delay: 2000,
-          onRetry: (attempt) => {
-            setStatus(attempt > 3 ? 'Przełączanie na model zapasowy...' : `Serwer zajęty, ponawianie (${attempt}/3)...`);
-          }
-        }
-      );
-
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      
       let imageUrl: string | null = null;
+      const candidate = response.candidates?.[0];
       
-      if (response.candidates?.[0]?.content?.parts) {
-        for (const part of response.candidates[0].content.parts) {
+      if (candidate?.content?.parts) {
+        for (const part of candidate.content.parts) {
           if (part.inlineData) {
             imageUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
             break;
@@ -271,7 +226,7 @@ export const useAI = (options: UseAIOptions = {}) => {
       }
 
       if (!imageUrl) {
-        throw new Error('Nie udało się wygenerować tła');
+        throw new Error('Nie udało się wygenerować tła tym modelem.');
       }
 
       setStatus('');
@@ -310,13 +265,19 @@ function handleAIError(err: any): string {
     return 'Błąd uprawnień (403). Upewnij się, że projekt Google Cloud ma włączony billing.';
   }
   
-  if (err?.message?.includes('429')) {
+  const msg = err?.message || '';
+  
+  if (msg.includes('429')) {
     return 'Przekroczono limit zapytań. Poczekaj chwilę i spróbuj ponownie.';
   }
   
-  if (err?.message?.includes('payload') || err?.message?.includes('413')) {
+  if (msg.includes('payload') || msg.includes('413')) {
     return 'Zbyt duży rozmiar zdjęć. Użyj mniejszej liczby lub mniejszych plików.';
   }
+
+  if (msg.includes('not found') || msg.includes('404')) {
+    return 'Model AI nie został znaleziony. Sprawdź konfigurację modelu w src/config/constants.ts';
+  }
   
-  return `Błąd: ${err?.message || 'Nieznany błąd'}`;
+  return `Błąd: ${msg || 'Nieznany błąd'}`;
 }
