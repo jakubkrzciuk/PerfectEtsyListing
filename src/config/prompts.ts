@@ -11,13 +11,13 @@ import { MOUNTING_MAP } from './constants';
 // ============================================
 
 export const buildListingSystemPrompt = (
-  formData: FormData, 
+  formData: FormData,
   selectedKeywords: string[],
   sizesBlock: string,
   linksBlock: string
 ): string => {
   const mountingEnglish = MOUNTING_MAP[formData.mounting] || formData.mounting;
-  
+
   return `You are an expert Etsy copywriter and PHOTOGRAPHY AUDITOR for "Lale Studio" - a premium handwoven tapestry brand.
 
 === ETSY 2026 STRATEGY REQUIREMENTS ===
@@ -112,67 +112,99 @@ Return ONLY valid JSON:
 
 export const buildMockupSystemPrompt = (
   formData: FormData,
-  mode: 'replace' | 'empty_mockup'
+  mode: 'replace' | 'empty_mockup',
+  inspirationStyle?: string
 ): string => {
-  const isWool = formData.material.toLowerCase().includes('wełn') || 
-                 formData.material.toLowerCase().includes('wool');
-  const materialDetails = isWool 
-    ? "two-ply twisted sheep wool (wełna owcza skręcana dwuniciowa)"
+  const isWool = formData.material.toLowerCase().includes('wełn') ||
+    formData.material.toLowerCase().includes('wool');
+  const materialDetails = isWool
+    ? "hand-woven tapestry made from two-ply twisted sheep wool — visible individual threads, soft matte texture, natural lanolin sheen"
     : formData.material;
   const mountingEnglish = MOUNTING_MAP[formData.mounting] || formData.mounting;
 
-  if (mode === 'empty_mockup') {
-    return `Generate a hyper-realistic interior design photograph of an empty wall ready for product placement.
+  // Styl wnętrza — z inspiracji użytkownika lub z form hints
+  const interiorStyle = inspirationStyle || formData.userHints ||
+    'Japandi minimalist — warm whites, natural wood, linen textures, negative space';
 
-REQUIREMENTS:
-- Setting: Premium interior with ${formData.colors || 'neutral warm tones'}
-- Style: ${formData.userHints || 'Modern Heritage, Japandi, Biophilic aesthetic'}
-- Lighting: Cinematic, soft natural daylight from side window, volumetric depth
-- Wall: Center area must be empty, clean, well-lit for product photoshopping
-- Atmosphere: Cozy, premium, Architectural Digest quality
-- NO floating objects, NO frames in center area
-- 8k resolution, photorealistic`;
+  if (mode === 'empty_mockup') {
+    return `Generate a HYPER-REALISTIC interior design photograph of an empty wall ready for product placement. 
+
+STYLE: ${interiorStyle}
+COLORS: ${formData.colors || 'warm whites, natural linen, light oak'}
+LIGHTING: Cinematic soft natural daylight from a side window. Gentle volumetric shadows. No harsh artificial light.
+QUALITY: 8K resolution, Architectural Digest editorial quality, Canon 5D Mark IV look
+WALL: Center area MUST be completely empty and clean — ideal for tapestry placement
+ATMOSPHERE: Minimalist, cozy, premium. Think Kinfolk magazine aesthetic.
+Details: Slight dust particles in light beams, visible linen texture on pillows, natural imperfections.
+NO floating objects. NO text. NO frames in center.`;
   }
 
-  return `You are a specialized vision and generative AI. Your task is to flawlessly composite a handwoven tapestry into a new interior setting.
+  return `You are a specialized image compositing AI. Your ONLY task: flawlessly place a handwoven tapestry into a new ultra-realistic interior photograph.
 
-=== PRODUCT ANALYSIS (Preserve these exact characteristics) ===
-- Material: ${materialDetails}
-- Weave Structure: Vertical and horizontal threads, yarn thickness and fluffiness
-- Painting Technique: Brush-applied paint on finished fabric (visible brush strokes, incomplete coverage in weave crevices, artistic abrasions)
-- Frame: ${mountingEnglish} - 1cm front width, 5cm depth
-- Weight/Drape: Physical "heaviness" of wool, natural sag when hung
-- Finishing: Natural materials only (wood, cotton strings)
+=== PRODUCT — PRESERVE EVERY DETAIL ===
+Material: ${materialDetails}
+Frame: ${mountingEnglish} frame visible in the product photo — match it EXACTLY (color, width ~1cm front, ~5cm depth shadow)
+Weave: Visible individual threads, micro-texture, natural yarn thickness variations
+Paint (if present): Brush-applied on fabric — visible strokes, slight paint bleeding into weave, artistic imperfections
+Weight/Drape: Tapestry hangs with natural gravity — slight sag, authentic physics
+Colors: Preserve original colors 100% — no color shift, no saturation boost
 
-=== CRITICAL RULES ===
-1. ABSOLUTELY preserve the exact texture from reference - NO smooth AI look
-2. Must look like hand-woven, hand-painted tapestry
-3. Add realistic 5cm depth shadow from frame
-4. Maintain natural fabric physics (drape, fold, gravity)
-5. Use only natural lighting that would exist in the described setting
-6. Photorealistic 8k quality
+=== COMPOSITING RULES (NON-NEGOTIABLE) ===
+1. The tapestry texture must be 100% from the reference image — NO smoothing, NO AI softening
+2. Cast a realistic drop shadow (5cm depth, soft edge matching scene lighting)
+3. Integrate ambient occlusion at frame-to-wall contact points
+4. Adjust tapestry lighting to perfectly match scene light direction
+5. The result must be INDISTINGUISHABLE from professional studio photography
 
-=== TASK ===
-Composite the provided tapestry into the requested setting while following ALL rules above. The result must look like a professional interior photography shot, not an AI generation.`;
+=== TARGET INTERIOR ===
+Style: ${interiorStyle}
+Dominant palette: ${formData.colors || 'neutral warm tones'}
+Quality benchmark: Architectural Digest, Kinfolk magazine, Dezeen — THAT level of realism`;
 };
 
 export const buildMockupUserPrompt = (
   suggestion: string,
-  hasReferenceBg: boolean
+  hasReferenceBg: boolean,
+  inspirationUrl?: string
 ): string => {
-  if (hasReferenceBg) {
-    return `TASK: Image 1 is the product (wall hanging tapestry). Image 2 is the target background/interior. 
-    
-Seamlessly composite Image 1 into Image 2. The tapestry should look naturally hung on the wall in Image 2, with proper lighting matching the scene, realistic shadows, and preserved texture.
+  if (hasReferenceBg || inspirationUrl) {
+    const bgNote = inspirationUrl
+      ? `Use the provided inspiration interior as the background scene.`
+      : `Image 2 is the target background interior — use it as the scene.`;
 
-Setting details: ${suggestion}`;
+    return `COMPOSITING TASK (CLEAN REPLACE):
+Image 1 = NEW handwoven tapestry (to be placed).
+${bgNote} (Image 2).
+
+INSTRUCTIONS:
+1. CLEAR THE WALL: Identify any existing frames, tapestries, or wall art in Image 2 and REMOVE them. The wall must look clean as if nothing was there.
+2. PLACE NEW PRODUCT: Insert Image 1 (the tapestry) onto that cleared wall area.
+3. 1-to-1 REALISM: Preserve everything else in Image 2 (furniture, plants, lighting, floor) EXACTLY as it is.
+4. INTEGRATION: Match the lighting, add realistic soft shadows from the new frame, and ensure the weave texture is perfectly preserved.
+
+Setting/Context: ${suggestion}
+
+Result must be a seamless 1-to-1 edit of the original room photograph.`;
   }
 
-  return `TASK: Place this handwoven tapestry in the following setting:
+  return `TASK: Create a HYPER-REALISTIC interior photograph with this handwoven tapestry naturally placed in it.
 
-${suggestion}
+Setting: ${suggestion}
 
-The final image should look like a hyper-realistic, high-end interior design photograph. Preserve all texture details of the original tapestry.`;
+COMPOSITION:
+- Tapestry centered on wall, eye-level placement
+- Fills ~35-45% of visible wall width — elegant proportions
+- Styled furniture around it (console table, plant, objects) but MINIMAL — let the tapestry breathe
+- Camera: 35mm equivalent focal length, f/2.8, slight bokeh on foreground elements
+
+REALISM REQUIREMENTS:
+- Natural ambient light matching the described setting
+- Realistic frame shadow on wall (5cm soft drop shadow)
+- Micro-dust particles visible in light beams
+- Subtle reflections on any glass/glossy surfaces in scene
+- NOT a render — must look like actual photography
+
+OUTPUT: Single wide-angle interior shot, horizontal or vertical based on setting. 8K resolution.`;
 };
 
 // ============================================

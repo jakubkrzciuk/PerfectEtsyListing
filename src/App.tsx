@@ -4,36 +4,41 @@
 // ============================================
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
+import {
   Sparkles, Database, RefreshCw, Settings, Key, Info,
-  Wand2, Trash2, Plus, CheckCircle2, Circle
+  Wand2, Trash2, Plus, CheckCircle2, Circle, LogOut, User, Heart
 } from 'lucide-react';
-import type { 
-  FormData, 
-  GeneratedContent, 
-  HistoryItem, 
+import type {
+  FormData,
+  GeneratedContent,
+  HistoryItem,
   PlatformStatus,
   SeoAnalysis,
   GenerationMode
 } from './types';
-import { 
-  ProductForm, 
-  ResultsPanel 
+import {
+  ProductForm,
+  ResultsPanel
 } from './components';
-import { 
-  useAI, 
-  useHistoryStorage, 
+import { LoginPage } from './components/LoginPage';
+import { InspirationsTab } from './components/InspirationsTab';
+import {
+  useAI,
   useKeywordsStorage,
   useClipboard
 } from './hooks';
-import { 
+import { useAuth } from './hooks/useAuth';
+import { useDatabase } from './hooks/useDatabase';
+import { useInspirations } from './hooks/useInspirations';
+import type { InspirationItem } from './hooks/useInspirations';
+import {
   processImagesForAI,
   analyzeSeo,
   formatSizesBlock,
   formatLinksBlock,
   getRandomKeywords
 } from './utils';
-import { 
+import {
   buildListingSystemPrompt,
   DEFAULT_KEYWORDS,
   AI_MODELS
@@ -63,31 +68,38 @@ const initialFormData: FormData = {
 // ============================================
 
 const App: React.FC = () => {
+  // Auth
+  const { user, loading: authLoading, signIn, signUp, signOut } = useAuth();
+
   // Tabs
-  const [activeTab, setActiveTab] = useState<'generator' | 'database'>('generator');
-  
+  const [activeTab, setActiveTab] = useState<'generator' | 'database' | 'inspiracje'>('generator');
+
   // API Key
   const [apiKeyReady, setApiKeyReady] = useState<boolean>(false);
-  
+
   // Form
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [generationMode, setGenerationMode] = useState<GenerationMode>('replace');
   const [referenceBg, setReferenceBg] = useState<string | null>(null);
-  
+
   // Results
   const [result, setResult] = useState<GeneratedContent | null>(null);
   const [seoAnalysis, setSeoAnalysis] = useState<SeoAnalysis | null>(null);
-  
-  // Storage
-  const { value: savedItems, setValue: setSavedItems } = useHistoryStorage();
+
+  // Storage - keywords zostają w localStorage, listingi w Supabase
   const { value: powerKeywords, setValue: setPowerKeywords } = useKeywordsStorage(DEFAULT_KEYWORDS);
-  
+  const { items: savedItems, addItem, removeItem, updatePlatforms } = useDatabase(user?.id);
+
+  // Inspiracji hook
+  const { items: inspirations, loading: inspirationsLoading, addInspiration, removeInspiration } = useInspirations(user?.id);
+  const [selectedInspiration, setSelectedInspiration] = useState<InspirationItem | null>(null);
+
   // AI Hook
-  const { 
-    generateListing, 
-    isLoading: isGenerating, 
+  const {
+    generateListing,
+    isLoading: isGenerating,
     error: aiError,
-    clearError 
+    clearError
   } = useAI();
 
   // ============================================
@@ -152,8 +164,8 @@ const App: React.FC = () => {
     try {
       // Prepare data
       const sizesBlock = formatSizesBlock(
-        formData.widthCm, 
-        formData.heightCm, 
+        formData.widthCm,
+        formData.heightCm,
         formData.additionalSizes
       );
       const linksBlock = formatLinksBlock(formData.similarLinks);
@@ -187,7 +199,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     if (!result || formData.images.length === 0) return;
 
     const initialPlatforms: PlatformStatus = {
@@ -196,6 +208,9 @@ const App: React.FC = () => {
       shopify: false,
       wescover: false
     };
+
+    // Zapisz pelne dane formularza (bez zdjęć — te idą do Storage)
+    const { images: _images, ...formDataWithoutImages } = formData;
 
     const newItem: HistoryItem = {
       id: Date.now().toString(),
@@ -215,14 +230,19 @@ const App: React.FC = () => {
       photoType: result.photoType,
       photoCritique: result.photoCritique,
       photoSuggestions: result.photoSuggestions,
+      formData: formDataWithoutImages,
     };
 
-    setSavedItems(prev => [newItem, ...prev]);
-    alert('Zapisano w historii!');
-  }, [result, formData, setSavedItems]);
+    try {
+      await addItem(newItem);
+      alert('Zapisano w bazie danych!');
+    } catch (err) {
+      alert('Błąd zapisu. Spróbuj ponownie.');
+    }
+  }, [result, formData, addItem]);
 
   const handleLoadFromHistory = (item: HistoryItem) => {
-    setResult({
+    const loadedResult = {
       title: item.title,
       tags: item.tags,
       altText: "",
@@ -236,14 +256,31 @@ const App: React.FC = () => {
       photoType: item.photoType || "Niezdefiniowany",
       photoCritique: item.photoCritique || "Brak oceny zdjęcia.",
       photoSuggestions: item.photoSuggestions || [],
-    });
-    setFormData(prev => ({ ...prev, images: item.thumbnails || [], name: item.name }));
+    };
+
+    setResult(loadedResult);
+
+    // Przywróć pełne dane formularza
+    if (item.formData) {
+      setFormData({ ...item.formData, images: item.thumbnails || [] });
+    } else {
+      setFormData(prev => ({ ...prev, images: item.thumbnails || [], name: item.name }));
+    }
+
+    // Ustaw analizę SEO (używa już zaimportowanej funkcji)
+    const analysis = analyzeSeo(loadedResult, item.name, powerKeywords);
+    setSeoAnalysis(analysis);
+
+    // Przejdź do zakładki generator i scrolluj na górę — wyniki będą od razu widoczne
     setActiveTab('generator');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 50);
   };
 
+
   const handleDeleteFromHistory = (id: string) => {
-    setSavedItems(prev => prev.filter(item => item.id !== id));
+    removeItem(id);
   };
 
   const handleNew = () => {
@@ -265,19 +302,42 @@ const App: React.FC = () => {
   };
 
   const togglePlatform = (id: string, platform: keyof PlatformStatus) => {
-    setSavedItems(prev => prev.map(item => {
-      if (item.id === id) {
-        return {
-          ...item,
-          platforms: {
-            ...item.platforms,
-            [platform]: !item.platforms[platform]
-          }
-        };
-      }
-      return item;
-    }));
+    const item = savedItems.find(i => i.id === id);
+    if (!item) return;
+    const newPlatforms = { ...item.platforms, [platform]: !item.platforms[platform] };
+    updatePlatforms(id, newPlatforms);
   };
+
+  // ============================================
+  // RENDER - LOADING
+  // ============================================
+  if (authLoading) {
+    return (
+      <div style={{
+        minHeight: '100vh', background: '#1c1917',
+        display: 'flex', alignItems: 'center', justifyContent: 'center'
+      }}>
+        <div style={{ textAlign: 'center', color: 'white' }}>
+          <div style={{
+            width: '48px', height: '48px', borderRadius: '50%',
+            border: '3px solid rgba(245,158,11,0.3)',
+            borderTopColor: '#d97706',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 16px',
+          }} />
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '14px' }}>Ładowanie...</p>
+        </div>
+        <style>{`@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
+      </div>
+    );
+  }
+
+  // ============================================
+  // RENDER - LOGIN
+  // ============================================
+  if (!user) {
+    return <LoginPage onSignIn={signIn} />;
+  }
 
   // ============================================
   // RENDER - API KEY SCREEN
@@ -304,7 +364,7 @@ const App: React.FC = () => {
           </div>
           <h2 className="text-xl font-bold mb-3 text-stone-800">Wymagany Klucz API</h2>
           <p className="mb-8 text-stone-600 leading-relaxed text-sm">
-            Aby korzystać z zaawansowanych modeli <strong>Gemini 2.0</strong>, 
+            Aby korzystać z zaawansowanych modeli <strong>Gemini 2.0</strong>,
             musisz wybrać klucz API powiązany z projektem Google Cloud.
           </p>
           <button
@@ -314,9 +374,9 @@ const App: React.FC = () => {
             <Settings size={20} /> Wybierz Klucz API
           </button>
           <p className="mt-6 text-xs text-stone-400 border-t border-stone-100 pt-4">
-            <a 
-              href="https://ai.google.dev/gemini-api/docs/billing" 
-              target="_blank" 
+            <a
+              href="https://ai.google.dev/gemini-api/docs/billing"
+              target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-1 hover:text-stone-600 transition-colors"
             >
@@ -366,6 +426,20 @@ const App: React.FC = () => {
               >
                 <RefreshCw size={20} />
               </button>
+              {/* User info + logout */}
+              <div className="flex items-center gap-2 ml-2 pl-2 border-l border-stone-200">
+                <div className="flex items-center gap-1.5 text-xs text-stone-500">
+                  <User size={14} />
+                  <span className="hidden sm:inline max-w-[120px] truncate">{user.email}</span>
+                </div>
+                <button
+                  onClick={signOut}
+                  className="p-2 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                  title="Wyloguj się"
+                >
+                  <LogOut size={18} />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -373,23 +447,33 @@ const App: React.FC = () => {
           <div className="flex space-x-8 border-b border-stone-100">
             <button
               onClick={() => setActiveTab('generator')}
-              className={`pb-4 text-sm font-bold uppercase tracking-wide border-b-2 transition-colors flex items-center gap-2 ${
-                activeTab === 'generator'
-                  ? 'border-amber-500 text-stone-800'
-                  : 'border-transparent text-stone-400 hover:text-stone-600'
-              }`}
+              className={`pb-4 text-sm font-bold uppercase tracking-wide border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'generator'
+                ? 'border-amber-500 text-stone-800'
+                : 'border-transparent text-stone-400 hover:text-stone-600'
+                }`}
             >
               <Sparkles size={18} /> Generator
             </button>
             <button
               onClick={() => setActiveTab('database')}
-              className={`pb-4 text-sm font-bold uppercase tracking-wide border-b-2 transition-colors flex items-center gap-2 ${
-                activeTab === 'database'
-                  ? 'border-amber-500 text-stone-800'
-                  : 'border-transparent text-stone-400 hover:text-stone-600'
-              }`}
+              className={`pb-4 text-sm font-bold uppercase tracking-wide border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'database'
+                ? 'border-amber-500 text-stone-800'
+                : 'border-transparent text-stone-400 hover:text-stone-600'
+                }`}
             >
               <Database size={18} /> Historia ({savedItems.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('inspiracje')}
+              className={`pb-4 text-sm font-bold uppercase tracking-wide border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'inspiracje'
+                ? 'border-rose-400 text-stone-800'
+                : 'border-transparent text-stone-400 hover:text-stone-600'
+                }`}
+            >
+              <Heart size={18} /> Inspiracje
+              {selectedInspiration && (
+                <span className="bg-rose-400 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">1</span>
+              )}
             </button>
           </div>
         </div>
@@ -397,7 +481,19 @@ const App: React.FC = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {activeTab === 'generator' ? (
+        {activeTab === 'inspiracje' ? (
+          <InspirationsTab
+            items={inspirations}
+            loading={inspirationsLoading}
+            onAdd={addInspiration}
+            onRemove={removeInspiration}
+            selectedId={selectedInspiration?.id || null}
+            onSelect={(item) => {
+              setSelectedInspiration(item);
+              if (item) setActiveTab('generator');
+            }}
+          />
+        ) : activeTab === 'generator' ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-12">
             {/* LEFT: Form */}
             <ProductForm
@@ -422,148 +518,185 @@ const App: React.FC = () => {
                   powerKeywords={powerKeywords}
                   onSave={handleSave}
                   onNew={handleNew}
+                  selectedInspiration={selectedInspiration}
+                  inspirations={inspirations}
+                  onSelectInspiration={setSelectedInspiration}
                 />
               ) : (
-                <div className="h-full flex flex-col items-center justify-center text-stone-400 border-2 border-dashed border-stone-200 rounded-xl bg-stone-50/50 min-h-[600px]">
-                  <Wand2 size={64} className="mb-6 text-amber-300" />
-                  <h3 className="text-2xl font-serif text-stone-600 mb-3">
-                    {isGenerating ? 'Generowanie...' : 'Gotowy?'}
+                <div className="h-full flex flex-col items-center justify-center text-stone-400 border-2 border-dashed border-stone-200 rounded-2xl bg-gradient-to-br from-stone-50 to-amber-50/30 min-h-[600px] p-8">
+                  <div className="w-20 h-20 rounded-full bg-amber-100 flex items-center justify-center mb-6">
+                    <Wand2 size={40} className="text-amber-400" />
+                  </div>
+                  <h3 className="text-2xl font-serif text-stone-700 mb-2 font-semibold">
+                    {isGenerating ? 'AI pracuje...' : 'Gotowy do generowania'}
                   </h3>
-                  <p className="text-center max-w-sm">
-                    {isGenerating 
-                      ? 'AI analizuje zdjęcia i tworzy optymalizowaną aukcję...'
-                      : 'Wypełnij dane produktu po lewej i kliknij GENERUJ AUKCJĘ'
+                  <p className="text-center max-w-xs text-stone-400 text-sm leading-relaxed">
+                    {isGenerating
+                      ? 'Gemini analizuje zdjęcia i tworzy aukcję zoptymalizowaną pod algorytm Etsy 2026...'
+                      : 'Wgraj zdjęcia, uzupełnij dane produktu i kliknij ⚡ GENERUJ AUKCJĘ'
                     }
                   </p>
+                  {isGenerating && (
+                    <div className="mt-6 flex gap-1">
+                      {[0, 1, 2].map(i => (
+                        <div key={i} className="w-2 h-2 rounded-full bg-amber-400"
+                          style={{ animation: `bounce 1s ease-in-out ${i * 0.2}s infinite` }} />
+                      ))}
+                    </div>
+                  )}
                   {aiError && (
-                    <div className="mt-6 p-4 bg-red-100 text-red-700 rounded-lg text-sm max-w-sm">
+                    <div className="mt-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm max-w-sm">
                       <strong>Błąd:</strong> {aiError}
                     </div>
                   )}
+                  <style>{`@keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }`}</style>
                 </div>
               )}
             </div>
           </div>
-        ) : (
-          /* Database / History Tab */
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-            {/* Keywords Management */}
-            <div className="lg:col-span-1 space-y-6">
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
-                <h2 className="text-lg font-bold mb-4">Słowa Kluczowe</h2>
-                <div className="flex gap-2 mb-4">
-                  <input
-                    type="text"
-                    placeholder="Dodaj słowo kluczowe..."
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleAddKeyword((e.target as HTMLInputElement).value);
-                        (e.target as HTMLInputElement).value = '';
-                      }
-                    }}
-                    className="flex-1 p-2 bg-stone-50 border border-stone-200 rounded text-sm"
-                  />
-                  <button
-                    onClick={() => {
-                      const input = document.querySelector('input[placeholder="Dodaj słowo kluczowe..."]') as HTMLInputElement;
-                      if (input) {
-                        handleAddKeyword(input.value);
-                        input.value = '';
-                      }
-                    }}
-                    className="bg-stone-800 text-white px-3 rounded hover:bg-stone-900"
-                  >
-                    <Plus size={16} />
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-2 max-h-96 overflow-y-auto">
-                  {powerKeywords.map((k, i) => (
-                    <div
-                      key={i}
-                      className="bg-stone-50 border border-stone-200 px-2 py-1 rounded text-xs flex gap-2 items-center"
-                    >
-                      {k}
-                      <button
-                        onClick={() => handleRemoveKeyword(k)}
-                        className="text-stone-400 hover:text-red-500"
-                      >
-                        <Trash2 size={10} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+        ) : activeTab === 'database' ? (
+          /* ===== DATABASE / HISTORIA TAB ===== */
+          <div className="space-y-6">
+            {/* Top bar */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-serif font-bold text-stone-800">Baza Listingów</h2>
+                <p className="text-sm text-stone-400 mt-0.5">{savedItems.length} zapisanych produktów w bazie danych</p>
               </div>
-            </div>
-
-            {/* History List */}
-            <div className="lg:col-span-2">
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-stone-200 min-h-[400px]">
-                <h2 className="text-lg font-bold mb-4">
-                  Historia ({savedItems.length} zapisanych)
-                </h2>
-                
-                {savedItems.length === 0 ? (
-                  <div className="text-center py-12 text-stone-400">
-                    <Database size={48} className="mx-auto mb-4 opacity-50" />
-                    <p>Brak zapisanych aukcji</p>
+              {/* Keywords toggle */}
+              <details className="relative">
+                <summary className="cursor-pointer list-none">
+                  <button className="flex items-center gap-2 px-4 py-2 bg-white border border-stone-200 rounded-lg text-sm font-bold text-stone-600 hover:bg-stone-50 shadow-sm">
+                    <Plus size={14} /> Słowa kluczowe ({powerKeywords.length})
+                  </button>
+                </summary>
+                <div className="absolute right-0 top-12 z-30 w-80 bg-white border border-stone-200 rounded-xl shadow-xl p-4">
+                  <h3 className="font-bold text-sm mb-3 text-stone-700">Power Keywords</h3>
+                  <div className="flex gap-2 mb-3">
+                    <input
+                      id="keyword-input"
+                      type="text"
+                      placeholder="Dodaj słowo..."
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleAddKeyword((e.target as HTMLInputElement).value);
+                          (e.target as HTMLInputElement).value = '';
+                        }
+                      }}
+                      className="flex-1 p-2 bg-stone-50 border border-stone-200 rounded text-xs"
+                    />
+                    <button
+                      onClick={() => {
+                        const input = document.getElementById('keyword-input') as HTMLInputElement;
+                        if (input) { handleAddKeyword(input.value); input.value = ''; }
+                      }}
+                      className="bg-stone-800 text-white px-3 rounded hover:bg-stone-900"
+                    >
+                      <Plus size={14} />
+                    </button>
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    {savedItems.map((item) => (
-                      <div
-                        key={item.id}
-                        className="border border-stone-100 rounded-lg p-4 bg-stone-50 hover:shadow-md transition-shadow"
-                      >
-                        <div className="flex gap-4">
-                          <img
-                            src={item.thumbnails?.[0] || ''}
-                            className="w-20 h-20 object-cover rounded-lg"
-                            alt={item.name}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-bold text-sm text-stone-800 truncate">
-                              {item.name}
-                            </h4>
-                            <p className="text-xs text-stone-500 mb-2">{item.date}</p>
-                            
-                            {/* Platform Status */}
-                            <div className="flex gap-3 mb-3">
-                              <PlatformToggle
-                                label="Etsy Lale"
-                                active={item.platforms.etsyLale}
-                                onToggle={() => togglePlatform(item.id, 'etsyLale')}
-                              />
-                              <PlatformToggle
-                                label="Etsy Shopniki"
-                                active={item.platforms.etsyShopniki}
-                                onToggle={() => togglePlatform(item.id, 'etsyShopniki')}
-                              />
-                            </div>
-
-                            <div className="flex gap-3">
-                              <button
-                                onClick={() => handleLoadFromHistory(item)}
-                                className="text-amber-600 text-xs font-bold uppercase hover:underline"
-                              >
-                                Edytuj
-                              </button>
-                              <button
-                                onClick={() => handleDeleteFromHistory(item.id)}
-                                className="text-stone-400 hover:text-red-500 text-xs"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
+                  <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto">
+                    {powerKeywords.map((k, i) => (
+                      <div key={i} className="bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full text-xs flex items-center gap-1 text-amber-800">
+                        {k}
+                        <button onClick={() => handleRemoveKeyword(k)} className="text-amber-400 hover:text-red-500">
+                          <Trash2 size={9} />
+                        </button>
                       </div>
                     ))}
                   </div>
-                )}
-              </div>
+                </div>
+              </details>
             </div>
+
+            {/* Cards grid */}
+            {savedItems.length === 0 ? (
+              <div className="text-center py-24 text-stone-300 border-2 border-dashed border-stone-200 rounded-2xl bg-stone-50">
+                <Database size={56} className="mx-auto mb-4 opacity-40" />
+                <p className="text-lg font-serif text-stone-400">Brak zapisanych aukcji</p>
+                <p className="text-sm text-stone-300 mt-1">Wygeneruj i zapisz pierwszy listing</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                {savedItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="bg-white rounded-2xl border border-stone-100 shadow-sm hover:shadow-lg transition-all duration-200 overflow-hidden group"
+                  >
+                    {/* Thumbnail */}
+                    <div className="relative aspect-square bg-stone-100 overflow-hidden">
+                      {item.thumbnails?.[0] ? (
+                        <img
+                          src={item.thumbnails[0]}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          alt={item.name}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-stone-300">
+                          <Database size={40} />
+                        </div>
+                      )}
+                      {/* Image count badge */}
+                      {(item.thumbnails?.length || 0) > 1 && (
+                        <div className="absolute top-2 right-2 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                          +{(item.thumbnails?.length || 1) - 1} zdj.
+                        </div>
+                      )}
+                      {/* Date */}
+                      <div className="absolute bottom-2 left-2 bg-black/50 text-white text-[9px] px-2 py-0.5 rounded-full">
+                        {item.date}
+                      </div>
+                    </div>
+
+                    {/* Info */}
+                    <div className="p-4">
+                      <h4 className="font-bold text-stone-900 text-sm mb-1 truncate" title={item.name}>
+                        {item.name}
+                      </h4>
+                      <p className="text-[10px] text-stone-400 leading-snug mb-3 line-clamp-2" title={item.title}>
+                        {item.title}
+                      </p>
+
+                      {/* Tags preview */}
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {(item.tags || []).slice(0, 3).map((tag, i) => (
+                          <span key={i} className="text-[9px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded-full">
+                            {tag}
+                          </span>
+                        ))}
+                        {(item.tags?.length || 0) > 3 && (
+                          <span className="text-[9px] text-stone-400">+{(item.tags?.length || 0) - 3}</span>
+                        )}
+                      </div>
+
+                      {/* Platform toggles */}
+                      <div className="flex gap-2 mb-4">
+                        <PlatformToggle label="Etsy Lale" active={item.platforms.etsyLale} onToggle={() => togglePlatform(item.id, 'etsyLale')} />
+                        <PlatformToggle label="Shopniki" active={item.platforms.etsyShopniki} onToggle={() => togglePlatform(item.id, 'etsyShopniki')} />
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleLoadFromHistory(item)}
+                          className="flex-1 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg transition-colors"
+                        >
+                          ➜ Wczytaj
+                        </button>
+                        <button
+                          onClick={() => handleDeleteFromHistory(item.id)}
+                          className="p-2 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        )}
+        ) : null}
       </main>
     </div>
   );
@@ -582,11 +715,10 @@ interface PlatformToggleProps {
 const PlatformToggle: React.FC<PlatformToggleProps> = ({ label, active, onToggle }) => (
   <button
     onClick={onToggle}
-    className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded transition-colors ${
-      active
-        ? 'bg-green-100 text-green-700'
-        : 'bg-stone-200 text-stone-500'
-    }`}
+    className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded transition-colors ${active
+      ? 'bg-green-100 text-green-700'
+      : 'bg-stone-200 text-stone-500'
+      }`}
   >
     {active ? <CheckCircle2 size={10} /> : <Circle size={10} />}
     {label}

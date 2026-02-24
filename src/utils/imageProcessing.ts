@@ -7,44 +7,59 @@ import type { ProcessedImage } from '../types';
 import { IMAGE_CONFIG } from '../config/constants';
 
 /**
+ * Fetch external URL image and convert to base64
+ * Required for images loaded from Supabase Storage
+ */
+const urlToBase64 = async (url: string): Promise<string> => {
+  const response = await fetch(url);
+  const blob = await response.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
+
+/**
  * Resize and compress image for AI processing
  * Reduces payload size while maintaining quality
  */
 export const resizeImage = (
-  base64Str: string, 
+  base64Str: string,
   maxWidth: number = IMAGE_CONFIG.MAX_WIDTH
 ): Promise<ProcessedImage> => {
   return new Promise((resolve) => {
     const img = new Image();
     img.src = base64Str;
-    
+
     img.onload = () => {
       const canvas = document.createElement('canvas');
       let width = img.width;
       let height = img.height;
-      
+
       // Calculate new dimensions maintaining aspect ratio
       if (width > maxWidth) {
         height *= maxWidth / width;
         width = maxWidth;
       }
-      
+
       // Also check height constraint
       if (height > IMAGE_CONFIG.MAX_HEIGHT) {
         width *= IMAGE_CONFIG.MAX_HEIGHT / height;
         height = IMAGE_CONFIG.MAX_HEIGHT;
       }
-      
+
       canvas.width = Math.round(width);
       canvas.height = Math.round(height);
-      
+
       const ctx = canvas.getContext('2d');
       if (ctx) {
         // Use better quality scaling
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, 0, 0, width, height);
-        
+
         // Compress to JPEG with configured quality
         const newDataUrl = canvas.toDataURL('image/jpeg', IMAGE_CONFIG.JPEG_QUALITY);
         resolve({
@@ -56,7 +71,7 @@ export const resizeImage = (
         resolve(extractBase64Data(base64Str));
       }
     };
-    
+
     img.onerror = () => {
       resolve(extractBase64Data(base64Str));
     };
@@ -79,19 +94,30 @@ export const processImagesForAI = async (
   images: string[],
   onProgress?: (processed: number, total: number) => void
 ): Promise<ProcessedImage[]> => {
-  // Select best images (first ones usually are main product shots)
   const imagesToProcess = images.slice(0, IMAGE_CONFIG.MAX_AI_IMAGES);
-  
   const processed: ProcessedImage[] = [];
-  
+
   for (let i = 0; i < imagesToProcess.length; i++) {
-    const img = await resizeImage(imagesToProcess[i]);
-    processed.push(img);
+    let img = imagesToProcess[i];
+
+    // Jeśli obraz jest URL-em (np. z Supabase Storage) — pobierz jako base64
+    if (img.startsWith('http')) {
+      try {
+        img = await urlToBase64(img);
+      } catch (err) {
+        console.warn('Could not fetch image from URL, skipping:', img);
+        continue;
+      }
+    }
+
+    const result = await resizeImage(img);
+    processed.push(result);
     onProgress?.(i + 1, imagesToProcess.length);
   }
-  
+
   return processed;
 };
+
 
 /**
  * Calculate optimal images to send to AI
@@ -101,15 +127,15 @@ export const selectImagesForAI = (images: string[]): string[] => {
   if (images.length <= IMAGE_CONFIG.MAX_AI_IMAGES) {
     return images;
   }
-  
+
   const selected: string[] = [];
   const step = Math.floor(images.length / IMAGE_CONFIG.MAX_AI_IMAGES);
-  
+
   for (let i = 0; i < IMAGE_CONFIG.MAX_AI_IMAGES; i++) {
     const index = Math.min(i * step, images.length - 1);
     selected.push(images[index]);
   }
-  
+
   return selected;
 };
 
@@ -132,10 +158,10 @@ export const validateImageFile = (file: File): { valid: boolean; error?: string 
   if (!file.type.startsWith('image/')) {
     return { valid: false, error: 'Plik musi być obrazem' };
   }
-  
+
   if (file.size > 10 * 1024 * 1024) {
     return { valid: false, error: 'Obraz jest za duży (max 10MB)' };
   }
-  
+
   return { valid: true };
 };

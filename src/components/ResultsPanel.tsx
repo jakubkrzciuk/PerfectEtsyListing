@@ -4,7 +4,7 @@
 // ============================================
 
 import React, { useState, useEffect } from 'react';
-import { 
+import {
   BarChart3, FileText, Eye, Sparkles, Save, Plus,
   RefreshCw, CheckCircle2
 } from 'lucide-react';
@@ -18,6 +18,8 @@ import { useAI } from '../hooks/useAI';
 import { useClipboard } from '../hooks/useClipboard';
 import { buildReanalysisPrompt } from '../config/prompts';
 
+import type { InspirationItem } from '../hooks/useInspirations';
+
 interface ResultsPanelProps {
   result: GeneratedContent;
   onResultChange: (result: GeneratedContent) => void;
@@ -26,6 +28,9 @@ interface ResultsPanelProps {
   powerKeywords: string[];
   onSave: () => void;
   onNew: () => void;
+  selectedInspiration?: InspirationItem | null;
+  inspirations?: InspirationItem[];
+  onSelectInspiration?: (item: InspirationItem | null) => void;
 }
 
 export const ResultsPanel: React.FC<ResultsPanelProps> = ({
@@ -35,7 +40,10 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
   seoAnalysis,
   powerKeywords,
   onSave,
-  onNew
+  onNew,
+  selectedInspiration,
+  inspirations,
+  onSelectInspiration,
 }) => {
   const [titleParts, setTitleParts] = useState(result.titleSegments || {
     hooks: '', features: '', vibe: '', name: ''
@@ -55,7 +63,7 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
     const parts = [titleParts.hooks, titleParts.features, titleParts.vibe, titleParts.name]
       .filter(p => p.trim());
     const newTitle = parts.join(' | ');
-    
+
     if (newTitle !== result.title) {
       onResultChange({ ...result, title: newTitle });
     }
@@ -65,7 +73,7 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
     try {
       const prompt = buildReanalysisPrompt(result.title, result.tags, result.description);
       const jsonText = await reanalyze(prompt);
-      
+
       const parsed = JSON.parse(jsonText);
       onResultChange({
         ...result,
@@ -108,6 +116,9 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
         referenceBg={null}
         photoScore={result.photoScore}
         photoSuggestions={result.photoSuggestions}
+        selectedInspiration={selectedInspiration}
+        inspirations={inspirations}
+        onSelectInspiration={onSelectInspiration}
       />
 
       {/* Etsy Preview */}
@@ -133,9 +144,8 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
             </h3>
             <button
               onClick={handleCopyAltText}
-              className={`text-xs font-bold transition-colors ${
-                isCopied('alt') ? 'text-green-600' : 'text-amber-600 hover:underline'
-              }`}
+              className={`text-xs font-bold transition-colors ${isCopied('alt') ? 'text-green-600' : 'text-amber-600 hover:underline'
+                }`}
             >
               {isCopied('alt') ? 'Skopiowano!' : 'Kopiuj'}
             </button>
@@ -150,7 +160,7 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
       <div className="bg-indigo-900 text-indigo-100 p-6 rounded-xl shadow-lg border border-indigo-700 relative overflow-hidden">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-bold font-serif flex items-center gap-2">
-            <BarChart3 className="text-indigo-400" /> 
+            <BarChart3 className="text-indigo-400" />
             Analiza Rynkowa
           </h3>
           <button
@@ -177,20 +187,18 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-sm font-bold uppercase text-stone-500">Opis</h3>
           <div className="flex gap-2">
-            <span className={`text-xs px-2 py-1 rounded ${
-              result.description.length >= 1000 
-                ? 'bg-green-100 text-green-700' 
-                : 'bg-red-100 text-red-700'
-            }`}>
+            <span className={`text-xs px-2 py-1 rounded ${result.description.length >= 1000
+              ? 'bg-green-100 text-green-700'
+              : 'bg-red-100 text-red-700'
+              }`}>
               {result.description.length} znaków
             </span>
             <button
               onClick={handleCopyDescription}
-              className={`text-xs px-3 py-1 rounded font-bold transition-colors ${
-                isCopied('desc') 
-                  ? 'bg-green-100 text-green-700' 
-                  : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-              }`}
+              className={`text-xs px-3 py-1 rounded font-bold transition-colors ${isCopied('desc')
+                ? 'bg-green-100 text-green-700'
+                : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                }`}
             >
               {isCopied('desc') ? 'Skopiowano!' : 'KOPIUJ'}
             </button>
