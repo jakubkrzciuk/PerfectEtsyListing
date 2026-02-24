@@ -67,8 +67,8 @@ export const useAI = (options: UseAIOptions = {}) => {
           model: AI_MODELS.TEXT,
           contents: { parts: contentParts },
           config: {
-            systemInstruction: systemPrompt,
-            responseMimeType: 'application/json'
+            system_instruction: systemPrompt,
+            response_mime_type: 'application/json'
           }
         }) as Promise<GenerateContentResponse>,
         {
@@ -81,8 +81,8 @@ export const useAI = (options: UseAIOptions = {}) => {
             model: AI_MODELS.PRO_ANALYSIS,
             contents: { parts: contentParts },
             config: {
-              systemInstruction: systemPrompt,
-              responseMimeType: 'application/json'
+              system_instruction: systemPrompt,
+              response_mime_type: 'application/json'
             }
           }) as Promise<GenerateContentResponse>
         }
@@ -140,8 +140,8 @@ export const useAI = (options: UseAIOptions = {}) => {
           model: AI_MODELS.IMAGE_GENERATION,
           contents: { parts },
           config: {
-            systemInstruction: systemPrompt,
-            responseModalities: ['image', 'text']
+            system_instruction: systemPrompt,
+            response_modalities: ['image', 'text']
           }
         }) as Promise<GenerateContentResponse>,
         {
@@ -154,7 +154,7 @@ export const useAI = (options: UseAIOptions = {}) => {
             model: AI_MODELS.IMAGE_FALLBACK,
             contents: { parts },
             config: {
-              systemInstruction: systemPrompt
+              system_instruction: systemPrompt
             }
           }) as Promise<GenerateContentResponse>
         }
@@ -204,8 +204,8 @@ export const useAI = (options: UseAIOptions = {}) => {
           model: AI_MODELS.TEXT,
           contents: 'Audit my changes.',
           config: {
-            systemInstruction: systemPrompt,
-            responseMimeType: 'application/json'
+            system_instruction: systemPrompt,
+            response_mime_type: 'application/json'
           }
         }) as Promise<GenerateContentResponse>
       );
@@ -247,7 +247,7 @@ export const useAI = (options: UseAIOptions = {}) => {
           model: AI_MODELS.IMAGE_GENERATION,
           contents: prompt,
           config: {
-            responseModalities: ['image', 'text']
+            response_modalities: ['image', 'text']
           }
         }) as Promise<GenerateContentResponse>,
         {
