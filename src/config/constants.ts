@@ -39,13 +39,13 @@ export const MOUNTING_MAP: Record<string, string> = {
 // ============================================
 
 export const AI_MODELS = {
-  // Tekst i analiza - Gemini 2.5 Flash (dostępny dla nowych użytkowników)
+  // Tekst i analiza
   TEXT: 'gemini-2.5-flash',
 
-  // Generowanie obrazów
-  IMAGE_GENERATION: 'gemini-2.5-flash',
+  // Generowanie obrazów - "Nano Banana" (oficjalny model Google do generowania obrazów)
+  IMAGE_GENERATION: 'gemini-2.5-flash-image',
 
-  // Fallback
+  // Fallback dla tekstu
   IMAGE_FALLBACK: 'gemini-2.5-flash',
 
   // Zaawansowana analiza
