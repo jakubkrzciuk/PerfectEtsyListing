@@ -35,21 +35,21 @@ export const MOUNTING_MAP: Record<string, string> = {
 } as const;
 
 // ============================================
-// AI MODELS - Stabilne modele Google
+// AI MODELS - Stabilne modele Google (v2.0)
 // ============================================
 
 export const AI_MODELS = {
-  // Tekst i analiza - szybki i tani
-  TEXT: 'gemini-1.5-flash',
+  // Tekst i analiza - najnowszy stabilny Flash 2.0
+  TEXT: 'models/gemini-2.0-flash-001',
   
   // Generowanie obrazów
-  IMAGE_GENERATION: 'gemini-1.5-flash',
+  IMAGE_GENERATION: 'models/gemini-2.0-flash-001',
   
   // Fallback dla obrazów
-  IMAGE_FALLBACK: 'gemini-1.5-flash',
+  IMAGE_FALLBACK: 'models/gemini-2.0-flash-001',
   
   // Zaawansowana analiza
-  PRO_ANALYSIS: 'gemini-1.5-pro'
+  PRO_ANALYSIS: 'models/gemini-2.0-pro-exp-02-05'
 } as const;
 
 // ============================================
