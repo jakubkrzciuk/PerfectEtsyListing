@@ -39,17 +39,17 @@ export const MOUNTING_MAP: Record<string, string> = {
 // ============================================
 
 export const AI_MODELS = {
-  // Tekst i analiza - sprawdzony model
-  TEXT: 'gemini-1.5-flash',
-  
-  // Generowanie obrazów - 2.0-flash-exp to jedyny darmowy wspierający natywne generowanie obrazów (experimental)
-  IMAGE_GENERATION: 'gemini-2.0-flash-exp',
-  
+  // Tekst i analiza - Gemini 2.5 Flash (dostępny dla nowych użytkowników)
+  TEXT: 'gemini-2.5-flash',
+
+  // Generowanie obrazów
+  IMAGE_GENERATION: 'gemini-2.5-flash',
+
   // Fallback
-  IMAGE_FALLBACK: 'gemini-1.5-flash',
-  
+  IMAGE_FALLBACK: 'gemini-2.5-flash',
+
   // Zaawansowana analiza
-  PRO_ANALYSIS: 'gemini-1.5-pro'
+  PRO_ANALYSIS: 'gemini-2.5-pro'
 } as const;
 
 // ============================================
@@ -60,16 +60,16 @@ export const IMAGE_CONFIG = {
   // Max rozmiar do AI - zmniejszone dla optymalizacji kosztów
   MAX_WIDTH: 1024,
   MAX_HEIGHT: 1024,
-  
+
   // Jakość kompresji JPEG
   JPEG_QUALITY: 0.85,
-  
+
   // Max zdjęć wysyłanych do AI na raz (optymalizacja payloadu)
   MAX_AI_IMAGES: 5,
-  
+
   // Max wszystkich zdjęć produktu
   MAX_PRODUCT_IMAGES: 20,
-  
+
   // Aspect ratio dla generowanych mockupów
   MOCKUP_ASPECT_RATIO: '4:3' as const
 } as const;
