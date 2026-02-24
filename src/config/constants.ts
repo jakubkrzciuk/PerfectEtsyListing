@@ -40,16 +40,16 @@ export const MOUNTING_MAP: Record<string, string> = {
 
 export const AI_MODELS = {
   // Tekst i analiza - szybki i tani
-  TEXT: 'gemini-1.5-flash',
+  TEXT: 'models/gemini-1.5-flash',
   
-  // Generowanie obrazów - używamy flash do analizy/generowania (uwaga: 1.5-flash nie generuje obrazów bezpośrednio w ten sam sposób co 2.0-flash-exp)
-  IMAGE_GENERATION: 'gemini-1.5-flash',
+  // Generowanie obrazów
+  IMAGE_GENERATION: 'models/gemini-1.5-flash',
   
   // Fallback dla obrazów
-  IMAGE_FALLBACK: 'gemini-1.5-flash',
+  IMAGE_FALLBACK: 'models/gemini-1.5-flash',
   
   // Zaawansowana analiza
-  PRO_ANALYSIS: 'gemini-1.5-pro'
+  PRO_ANALYSIS: 'models/gemini-1.5-pro'
 } as const;
 
 // ============================================
