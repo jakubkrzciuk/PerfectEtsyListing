@@ -46,14 +46,17 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       }
     }
 
-    // Convert to base64
-    validFiles.forEach(file => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        onImagesChange([...images, reader.result as string]);
-        setError(null);
-      };
-      reader.readAsDataURL(file);
+    // Convert all files to base64 in parallel, then add together
+    const readFile = (file: File): Promise<string> =>
+      new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+
+    Promise.all(validFiles.map(readFile)).then(base64Array => {
+      onImagesChange([...images, ...base64Array]);
+      setError(null);
     });
 
     // Reset input
@@ -65,7 +68,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   const handleUrlLoad = async () => {
     const url = urlInput.trim();
     if (!url) return;
-    
+
     if (images.length >= maxImages) {
       setError(`Maksymalnie ${maxImages} zdjęć!`);
       return;
@@ -76,7 +79,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
 
     try {
       let blob: Blob;
-      
+
       // Try direct fetch first
       try {
         const response = await fetch(url);
@@ -118,33 +121,30 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           <label className="block text-sm font-medium text-stone-600">
             Zdjęcia produktu
           </label>
-          <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-            images.length >= maxImages 
-              ? 'bg-green-100 text-green-700' 
+          <span className={`text-xs font-bold px-2 py-0.5 rounded ${images.length >= maxImages
+              ? 'bg-green-100 text-green-700'
               : 'bg-stone-100 text-stone-600'
-          }`}>
+            }`}>
             {images.length}/{maxImages}
           </span>
         </div>
-        
+
         <div className="flex bg-stone-100 rounded-lg p-0.5">
           <button
             onClick={() => setInputMode('file')}
-            className={`px-2 py-1 text-[10px] font-bold rounded ${
-              inputMode === 'file' 
-                ? 'bg-white shadow text-stone-800' 
+            className={`px-2 py-1 text-[10px] font-bold rounded ${inputMode === 'file'
+                ? 'bg-white shadow text-stone-800'
                 : 'text-stone-400'
-            }`}
+              }`}
           >
             Pliki
           </button>
           <button
             onClick={() => setInputMode('url')}
-            className={`px-2 py-1 text-[10px] font-bold rounded ${
-              inputMode === 'url' 
-                ? 'bg-white shadow text-stone-800' 
+            className={`px-2 py-1 text-[10px] font-bold rounded ${inputMode === 'url'
+                ? 'bg-white shadow text-stone-800'
                 : 'text-stone-400'
-            }`}
+              }`}
           >
             Link
           </button>
@@ -155,8 +155,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       {images.length > 0 && (
         <div className="grid grid-cols-5 gap-2 mb-4">
           {images.map((img, idx) => (
-            <div 
-              key={idx} 
+            <div
+              key={idx}
               className="relative aspect-square rounded overflow-hidden border border-stone-200 group"
             >
               <img src={img} className="w-full h-full object-cover" alt={`Product ${idx + 1}`} />
