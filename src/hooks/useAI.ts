@@ -19,9 +19,14 @@ export const useAI = (options: UseAIOptions = {}) => {
   const [error, setError] = useState<string | null>(null);
 
   const getAI = useCallback((): GoogleGenerativeAI => {
-    const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+    // Wsparcie dla Vite (import.meta.env) oraz standardowych nazw
+    const apiKey = (import.meta.env?.VITE_GEMINI_API_KEY) || 
+                   (import.meta.env?.VITE_API_KEY) ||
+                   process.env.API_KEY || 
+                   process.env.GEMINI_API_KEY;
+
     if (!apiKey) {
-      throw new Error('Brak klucza API. Skonfiguruj GEMINI_API_KEY.');
+      throw new Error('Brak klucza API. Dodaj VITE_GEMINI_API_KEY do zmiennych środowiskowych (Vercel/env).');
     }
     return new GoogleGenerativeAI(apiKey);
   }, []);
