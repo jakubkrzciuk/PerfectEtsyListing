@@ -35,21 +35,21 @@ export const MOUNTING_MAP: Record<string, string> = {
 } as const;
 
 // ============================================
-// AI MODELS - Aktualne modele Google (2025)
+// AI MODELS - Stabilne modele Google
 // ============================================
 
 export const AI_MODELS = {
   // Tekst i analiza - szybki i tani
-  TEXT: 'gemini-2.0-flash',
+  TEXT: 'gemini-1.5-flash',
   
-  // Generowanie obrazów - eksperymentalny model z generowaniem
-  IMAGE_GENERATION: 'gemini-2.0-flash-exp-image-generation',
+  // Generowanie obrazów - używamy flash do analizy/generowania (uwaga: 1.5-flash nie generuje obrazów bezpośrednio w ten sam sposób co 2.0-flash-exp)
+  IMAGE_GENERATION: 'gemini-1.5-flash',
   
-  // Fallback dla obrazów gdy główny przeciążony
-  IMAGE_FALLBACK: 'gemini-2.0-flash',
+  // Fallback dla obrazów
+  IMAGE_FALLBACK: 'gemini-1.5-flash',
   
-  // Zaawansowana analiza - jeśli potrzebna głębsza
-  PRO_ANALYSIS: 'gemini-2.0-pro-exp-02-05'
+  // Zaawansowana analiza
+  PRO_ANALYSIS: 'gemini-1.5-pro'
 } as const;
 
 // ============================================
