@@ -39,7 +39,7 @@ export const useAI = (options: UseAIOptions = {}) => {
     if (!apiKey) {
       throw new Error('Brak klucza API. Skonfiguruj GEMINI_API_KEY.');
     }
-    return new GoogleGenAI({ apiKey, apiVersion: 'v1' });
+    return new GoogleGenAI({ apiKey, apiVersion: 'v1beta' });
   }, []);
 
   /**
