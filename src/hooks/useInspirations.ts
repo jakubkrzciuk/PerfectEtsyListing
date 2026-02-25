@@ -11,6 +11,8 @@ export interface InspirationItem {
     url: string;       // publiczny URL z Supabase Storage
     name: string;      // opis (np. "Skandynawski salon")
     style: string;     // styl AI (przesyłany do prompta)
+    type: 'with_product' | 'empty'; // Nowe: czy na zdjęciu jest już gobelin
+    originalDimensions?: string;   // Nowe: co już tam jest (np. "80x100")
     addedAt: string;
 }
 
@@ -38,7 +40,9 @@ export const useInspirations = (userId: string | undefined) => {
     const addInspiration = useCallback(async (
         base64: string,
         name: string,
-        style: string
+        style: string,
+        type: 'with_product' | 'empty' = 'empty',
+        originalDimensions: string = ''
     ) => {
         if (!userId) return;
         setLoading(true);
@@ -71,6 +75,8 @@ export const useInspirations = (userId: string | undefined) => {
                 url: data.publicUrl,
                 name,
                 style,
+                type,
+                originalDimensions,
                 addedAt: new Date().toLocaleDateString('pl-PL'),
             };
 

@@ -127,39 +127,26 @@ export const buildMockupSystemPrompt = (
     'Japandi minimalist — warm whites, natural wood, linen textures, negative space';
 
   if (mode === 'empty_mockup') {
-    return `Generate a HYPER-REALISTIC interior design photograph of an empty wall ready for product placement. 
-
+    return `Generate a HYPER-REALISTIC 4K interior photograph of an empty wall.
 STYLE: ${interiorStyle}
 COLORS: ${formData.colors || 'warm whites, natural linen, light oak'}
-LIGHTING: Cinematic soft natural daylight from a side window. Gentle volumetric shadows. No harsh artificial light.
-QUALITY: 8K resolution, Architectural Digest editorial quality, Canon 5D Mark IV look
-WALL: Center area MUST be completely empty and clean — ideal for tapestry placement
-ATMOSPHERE: Minimalist, cozy, premium. Think Kinfolk magazine aesthetic.
-Details: Slight dust particles in light beams, visible linen texture on pillows, natural imperfections.
-NO floating objects. NO text. NO frames in center.`;
+LIGHTING: Cinematic soft daylight with subtle shadows in corners. 
+WALL: The center wall MUST be a clean, blank surface with realistic plaster texture. 
+QUALITY: 4K Ultra-HD, editorial photography.
+NO products, NO frames, NO floating objects. Just a perfectly lit blank wall ready for art.`;
   }
 
-  return `You are a specialized image compositing AI. Your ONLY task: flawlessly place a handwoven tapestry into a new ultra-realistic interior photograph.
+  return `You are a professional 4K Digital Compositor & Photorealistic Rendering Engine.
+TASK: IN-PAINT the exact physical product from IMAGE 1 into IMAGE 2.
 
-=== PRODUCT — PRESERVE EVERY DETAIL ===
-Material: ${materialDetails}
-Frame: ${mountingEnglish} frame visible in the product photo — match it EXACTLY (color, width ~1cm front, ~5cm depth shadow)
-Weave: Visible individual threads, micro-texture, natural yarn thickness variations
-Paint (if present): Brush-applied on fabric — visible strokes, slight paint bleeding into weave, artistic imperfections
-Weight/Drape: Tapestry hangs with natural gravity — slight sag, authentic physics
-Colors: Preserve original colors 100% — no color shift, no saturation boost
+=== CRITICAL FIDELITY RULES ===
+1. ZERO MODIFICATION: Use IMAGE 1 exactly as it is (including its physical frame). 
+2. INTERACTION: Strictly follow the surface placement in IMAGE 2 (for replacement) or the SETTING (for generation). If it should be LEANING or ON A SURFACE, do not hang it on the wall.
+3. PIXEL-PERFECTION: REPLICATE the textures of ${materialDetails} and the specific ${mountingEnglish}.
+4. ERASE & OVERWRITE: Completely erase the existing target object in IMAGE 2 before placing IMAGE 1.
+5. PHOTOREALISM: Match the dust, grain, and lighting of IMAGE 2 for 4K realism.
 
-=== COMPOSITING RULES (NON-NEGOTIABLE) ===
-1. The tapestry texture must be 100% from the reference image — NO smoothing, NO AI softening
-2. Cast a realistic drop shadow (5cm depth, soft edge matching scene lighting)
-3. Integrate ambient occlusion at frame-to-wall contact points
-4. Adjust tapestry lighting to perfectly match scene light direction
-5. The result must be INDISTINGUISHABLE from professional studio photography
-
-=== TARGET INTERIOR ===
-Style: ${interiorStyle}
-Dominant palette: ${formData.colors || 'neutral warm tones'}
-Quality benchmark: Architectural Digest, Kinfolk magazine, Dezeen — THAT level of realism`;
+Style: ${interiorStyle}. Resolution: 4K Ultra-HD.`;
 };
 
 export const buildMockupUserPrompt = (
@@ -167,44 +154,28 @@ export const buildMockupUserPrompt = (
   hasReferenceBg: boolean,
   inspirationUrl?: string
 ): string => {
+  const context = `Context: ${suggestion}`;
+
   if (hasReferenceBg || inspirationUrl) {
-    const bgNote = inspirationUrl
-      ? `Use the provided inspiration interior as the background scene.`
-      : `Image 2 is the target background interior — use it as the scene.`;
+    return `[HIGH-FIDELITY COMPOSITE]
+1. LOOK at IMAGE 1: Note the exact frame and textures.
+2. LOOK at IMAGE 2: Detect the target object (placed on wall, leaning, or on cabinet).
+3. REPLACE: Remove the target object and place IMAGE 1 in its EXACT spot. 
+4. FIDELITY: Use the frame from Image 1. DO NOT change it.
+5. SCALE: ${suggestion}. Add micro-shadows at contact points.
 
-    return `COMPOSITING TASK (CLEAN REPLACE):
-Image 1 = NEW handwoven tapestry (to be placed).
-${bgNote} (Image 2).
-
-INSTRUCTIONS:
-1. CLEAR THE WALL: Identify any existing frames, tapestries, or wall art in Image 2 and REMOVE them. The wall must look clean as if nothing was there.
-2. PLACE NEW PRODUCT: Insert Image 1 (the tapestry) onto that cleared wall area.
-3. 1-to-1 REALISM: Preserve everything else in Image 2 (furniture, plants, lighting, floor) EXACTLY as it is.
-4. INTEGRATION: Match the lighting, add realistic soft shadows from the new frame, and ensure the weave texture is perfectly preserved.
-
-Setting/Context: ${suggestion}
-
-Result must be a seamless 1-to-1 edit of the original room photograph.`;
+${context}
+GOAL: Perfect physical integration of IMAGE 1 into IMAGE 2.`;
   }
 
-  return `TASK: Create a HYPER-REALISTIC interior photograph with this handwoven tapestry naturally placed in it.
-
-Setting: ${suggestion}
+  return `TASK: Generate a HYPER-REALISTIC 4K photograph of an interior. 
+Place the tapestry from IMAGE 1 as the main focal point in the room.
 
 COMPOSITION:
-- Tapestry centered on wall, eye-level placement
-- Fills ~35-45% of visible wall width — elegant proportions
-- Styled furniture around it (console table, plant, objects) but MINIMAL — let the tapestry breathe
-- Camera: 35mm equivalent focal length, f/2.8, slight bokeh on foreground elements
-
-REALISM REQUIREMENTS:
-- Natural ambient light matching the described setting
-- Realistic frame shadow on wall (5cm soft drop shadow)
-- Micro-dust particles visible in light beams
-- Subtle reflections on any glass/glossy surfaces in scene
-- NOT a render — must look like actual photography
-
-OUTPUT: Single wide-angle interior shot, horizontal or vertical based on setting. 8K resolution.`;
+- SETTING: ${suggestion}
+- SINGLE LAYER: No virtual frames.
+- SHADOWS: Realistic contact shadows.
+- QUALITY: Cinematic lighting, 4K resolution.`;
 };
 
 // ============================================
@@ -218,22 +189,22 @@ export const buildReanalysisPrompt = (
 ): string => `You are a strict Etsy SEO Expert auditor specialized in "2026 Strategy".
 
 INPUT DATA:
-- Title: ${title}
-- Tags: ${tags.join(', ')}
-- Description length: ${description.length} characters
+    - Title: ${title}
+    - Tags: ${tags.join(', ')}
+    - Description length: ${description.length} characters
 
 AUDIT CHECKLIST:
-1. Title length (132-140 chars) - current: ${title.length}
-2. Title structure (Hook | Features | Vibe | Name)
-3. Tag quality (13 tags, multi-word preferred)
-4. Keyword density and placement
-5. Description length (1000+ chars) - current: ${description.length >= 1000 ? 'OK' : 'TOO SHORT'}
-6. Missing power keywords
-7. Duplicate tags in title
+    1. Title length(132 - 140 chars) - current: ${title.length}
+    2. Title structure(Hook | Features | Vibe | Name)
+    3. Tag quality(13 tags, multi - word preferred)
+    4. Keyword density and placement
+    5. Description length(1000 + chars) - current: ${description.length >= 1000 ? 'OK' : 'TOO SHORT'}
+    6. Missing power keywords
+    7. Duplicate tags in title
 
 Provide detailed Polish feedback on:
-- What's working well
-- What needs immediate improvement
-- Specific action items with examples
+    - What's working well
+      - What needs immediate improvement
+        - Specific action items with examples
 
-Return JSON: {"marketAnalysis": "...", "keywordStrategy": "..."}`;
+Return JSON: { "marketAnalysis": "...", "keywordStrategy": "..." } `;

@@ -57,12 +57,12 @@ export const AI_MODELS = {
 // ============================================
 
 export const IMAGE_CONFIG = {
-  // Max rozmiar do AI - zmniejszone dla optymalizacji kosztów
-  MAX_WIDTH: 1024,
-  MAX_HEIGHT: 1024,
+  // Max rozmiar do AI - zwiększone dla najwyższej precyzji (4K ready)
+  MAX_WIDTH: 2560,
+  MAX_HEIGHT: 2560,
 
   // Jakość kompresji JPEG
-  JPEG_QUALITY: 0.85,
+  JPEG_QUALITY: 0.9,
 
   // Max zdjęć wysyłanych do AI na raz (optymalizacja payloadu)
   MAX_AI_IMAGES: 5,

@@ -1,10 +1,10 @@
 // ============================================
 // PRODUCT FORM COMPONENT
-// All form inputs for product data
+// Premium 2026 configurator layout
 // ============================================
 
 import React from 'react';
-import { Ruler, Link, Trash2, Plus, Image as ImageIcon, X } from 'lucide-react';
+import { Ruler, Link, Trash2, Plus, Image as ImageIcon, X, Sparkles, MapPin, Palette, Settings2, Wand2, Layers } from 'lucide-react';
 import type { FormData, GenerationMode, SizeVariant, SimilarProduct } from '../types';
 import { PRESETS, MOUNTING_MAP } from '../config/constants';
 import { ImageUploader } from './ImageUploader';
@@ -49,6 +49,13 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     }
   };
 
+  const removeSize = (index: number) => {
+    onFormDataChange({
+      ...formData,
+      additionalSizes: formData.additionalSizes.filter((_, i) => i !== index)
+    });
+  };
+
   const addPresetSize = (w: string, h: string) => {
     const exists = formData.additionalSizes.some(s => s.width === w && s.height === h);
     if (!exists) {
@@ -57,13 +64,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         additionalSizes: [...formData.additionalSizes, { width: w, height: h }]
       });
     }
-  };
-
-  const removeSize = (index: number) => {
-    onFormDataChange({
-      ...formData,
-      additionalSizes: formData.additionalSizes.filter((_, i) => i !== index)
-    });
   };
 
   const addLink = () => {
@@ -83,359 +83,290 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     });
   };
 
-  const handleBgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => onReferenceBgChange(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
-
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-8 rounded-xl shadow-sm border border-stone-200">
-        {/* Mode Switcher */}
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-serif font-semibold text-stone-700">
-            1. Dane Produktu
-          </h2>
-          <div className="flex bg-stone-100 p-1 rounded-lg">
-            <button
-              onClick={() => onGenerationModeChange('replace')}
-              className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${
-                generationMode === 'replace'
-                  ? 'bg-white shadow-sm text-stone-800'
-                  : 'text-stone-500 hover:text-stone-700'
-              }`}
-              title="AI spróbuje wkleić produkt w nowe tło"
-            >
-              Tryb Edycji (AI)
-            </button>
-            <button
-              onClick={() => onGenerationModeChange('empty_mockup')}
-              className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${
-                generationMode === 'empty_mockup'
-                  ? 'bg-white shadow-sm text-stone-800'
-                  : 'text-stone-500 hover:text-stone-700'
-              }`}
-              title="AI wygeneruje tylko puste wnętrze"
-            >
-              Pusty Mockup
-            </button>
-          </div>
-        </div>
+    <div className="space-y-8 animate-fade-in">
+      {/* 0. SECTION: IDENTITY */}
+      <section className="premium-card p-8 bg-stone-50 border-amber-200/50">
+        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600 mb-6 block">00. Tożsamość Projektu</label>
 
-        {/* Mode Info */}
-        {generationMode === 'empty_mockup' ? (
-          <div className="mb-6 p-3 bg-blue-50 text-blue-800 text-xs rounded-lg border border-blue-200">
-            <strong>Tryb Pustego Mockupu:</strong> AI wygeneruje <b>tylko puste wnętrze</b> 
-            (bez gobelinu). Użyj tego tła w Canvie/Photoshopie.
-          </div>
-        ) : (
-          <div className="mb-6 p-3 bg-amber-50 text-amber-800 text-xs rounded-lg border border-amber-200">
-            <strong>Tryb Edycji AI:</strong> AI spróbuje wkleić produkt w nowe tło. 
-            <b>Uwaga:</b> Może utracić oryginalną fakturę wełny.
-          </div>
-        )}
-
-        {/* Image Upload */}
-        <ImageUploader
-          images={formData.images}
-          onImagesChange={(images) => onFormDataChange({ ...formData, images })}
-        />
-
-        {/* Reference Background (for replace mode) */}
-        {generationMode === 'replace' && (
-          <div className="mb-8 p-4 bg-stone-50 rounded-lg border border-stone-200">
-            <label className="block text-xs font-bold uppercase text-stone-500 mb-2 flex items-center gap-1">
-              <ImageIcon size={14} /> Własne tło (Opcjonalnie)
-            </label>
-            <p className="text-[10px] text-stone-400 mb-3">
-              Wgraj konkretną ścianę/wnętrze jako tło dla mockupu
-            </p>
-
-            {referenceBg ? (
-              <div className="relative w-full h-32 rounded overflow-hidden border border-stone-200 group">
-                <img src={referenceBg} className="w-full h-full object-cover" alt="Background" />
-                <button
-                  onClick={() => onReferenceBgChange(null)}
-                  className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 
-                           opacity-0 group-hover:opacity-100 hover:bg-red-500"
-                >
-                  <X size={12} />
-                </button>
-              </div>
-            ) : (
-              <div
-                onClick={() => bgInputRef.current?.click()}
-                className="w-full h-20 rounded border-2 border-dashed border-stone-300 flex items-center 
-                         justify-center cursor-pointer hover:bg-stone-100 transition-colors bg-white"
-              >
-                <span className="text-xs text-stone-400 font-medium">
-                  Kliknij, aby wgrać tło
-                </span>
-                <input
-                  type="file"
-                  ref={bgInputRef}
-                  onChange={handleBgUpload}
-                  className="hidden"
-                  accept="image/*"
-                />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Core Fields */}
-        <div className="grid grid-cols-2 gap-6 mb-6">
-          <div>
-            <label className="block text-xs font-bold uppercase text-stone-500 mb-1">
-              Nazwa produktu
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-stone-500 flex items-center gap-2">
+              <Sparkles size={12} className="text-amber-500" /> Nazwa Produktu (Dlaczego to ważne?)
             </label>
             <input
-              type="text"
               name="name"
               value={formData.name}
               onChange={handleChange}
-              placeholder="np. Whispering Forest"
-              className="w-full p-3 bg-stone-50 border border-stone-200 rounded text-sm"
+              placeholder="np. Szept Lasu - Abstrakcyjny Gobelin Wełniany"
+              className="w-full p-4 bg-white border border-stone-200 rounded-2xl text-lg font-serif italic focus:border-amber-500 focus:shadow-[0_0_20px_rgba(217,119,6,0.1)] outline-none transition-all"
             />
           </div>
-          <div>
-            <label className="block text-xs font-bold uppercase text-stone-500 mb-1">
-              Kolorystyka
-            </label>
-            <input
-              type="text"
-              name="colors"
-              value={formData.colors}
-              onChange={handleChange}
-              placeholder="np. Beige, Terracotta, Sage"
-              className="w-full p-3 bg-stone-50 border border-stone-200 rounded text-sm"
-            />
-          </div>
-        </div>
 
-        {/* Dimensions */}
-        <div className="mb-6">
-          <label className="block text-xs font-bold uppercase text-stone-500 mb-2">
-            Wymiary (cm)
-          </label>
-          <div className="flex flex-wrap gap-2 mb-3">
-            {PRESETS.map((p, i) => (
-              <button
-                key={i}
-                onClick={() => onFormDataChange({ 
-                  ...formData, 
-                  widthCm: p.w, 
-                  heightCm: p.h 
-                })}
-                className="px-3 py-1.5 bg-stone-100 hover:bg-amber-100 text-stone-600 
-                         text-xs rounded-full border border-stone-200 transition-colors"
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
           <div className="grid grid-cols-2 gap-4">
-            <input
-              type="number"
-              placeholder="Szerokość"
-              name="widthCm"
-              value={formData.widthCm}
-              onChange={handleChange}
-              className="w-full p-3 bg-stone-50 border border-stone-200 rounded text-sm"
-            />
-            <input
-              type="number"
-              placeholder="Wysokość"
-              name="heightCm"
-              value={formData.heightCm}
-              onChange={handleChange}
-              className="w-full p-3 bg-stone-50 border border-stone-200 rounded text-sm"
-            />
-          </div>
-        </div>
-
-        {/* Additional Sizes */}
-        <div className="mb-6 bg-stone-50 p-4 rounded-lg border border-stone-200">
-          <label className="block text-xs font-bold uppercase text-stone-500 mb-3 flex items-center gap-1">
-            <Ruler size={14} /> Dodatkowe Warianty
-          </label>
-
-          <div className="flex flex-wrap gap-2 mb-4">
-            {PRESETS.map((p, i) => (
-              <button
-                key={i}
-                onClick={() => addPresetSize(p.w, p.h)}
-                className="px-3 py-1.5 bg-white hover:bg-green-50 hover:text-green-700 
-                         hover:border-green-300 text-stone-500 text-xs rounded-full 
-                         border border-stone-200 transition-colors flex items-center gap-1"
-              >
-                <Plus size={10} /> {p.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex gap-3 mb-3">
-            <input
-              type="number"
-              placeholder="W"
-              value={tempSize.w}
-              onChange={(e) => setTempSize({ ...tempSize, w: e.target.value })}
-              className="w-1/3 p-2 bg-white border border-stone-300 rounded text-xs"
-            />
-            <input
-              type="number"
-              placeholder="H"
-              value={tempSize.h}
-              onChange={(e) => setTempSize({ ...tempSize, h: e.target.value })}
-              className="w-1/3 p-2 bg-white border border-stone-300 rounded text-xs"
-            />
-            <button
-              onClick={addSize}
-              className="flex-1 bg-stone-800 text-white text-xs rounded font-bold hover:bg-stone-900"
-            >
-              DODAJ
-            </button>
-          </div>
-
-          {formData.additionalSizes.map((s, i) => (
-            <div
-              key={i}
-              className="flex justify-between items-center bg-white px-3 py-2 rounded 
-                       border border-stone-200 text-xs mb-1"
-            >
-              <span className="font-medium">{s.width}x{s.height}cm</span>
-              <button
-                onClick={() => removeSize(i)}
-                className="text-stone-400 hover:text-red-500"
-              >
-                <Trash2 size={12} />
-              </button>
-            </div>
-          ))}
-        </div>
-
-        {/* Similar Links */}
-        <div className="mb-6 bg-stone-50 p-4 rounded-lg border border-stone-200">
-          <label className="block text-xs font-bold uppercase text-stone-500 mb-3 flex items-center gap-1">
-            <Link size={14} /> Podobne Produkty
-          </label>
-          <div className="flex flex-col gap-2 mb-3">
-            <input
-              type="text"
-              placeholder="URL"
-              value={tempLink.url}
-              onChange={(e) => setTempLink({ ...tempLink, url: e.target.value })}
-              className="w-full p-2 bg-white border border-stone-300 rounded text-xs"
-            />
-            <div className="flex gap-2">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase text-stone-500 flex items-center gap-2">
+                <Layers size={12} /> Materiał
+              </label>
               <input
-                type="text"
-                placeholder="Etykieta"
-                value={tempLink.label}
-                onChange={(e) => setTempLink({ ...tempLink, label: e.target.value })}
-                className="flex-1 p-2 bg-white border border-stone-300 rounded text-xs"
+                name="material"
+                value={formData.material}
+                onChange={handleChange}
+                placeholder="np. 100% Owcza Wełna"
+                className="w-full p-3 bg-white border border-stone-200 rounded-xl text-xs font-bold focus:border-amber-500 outline-none transition-all"
               />
-              <button
-                onClick={addLink}
-                className="bg-stone-800 text-white text-xs px-4 rounded font-bold hover:bg-stone-900"
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase text-stone-500 flex items-center gap-2">
+                <Settings2 size={12} /> Typ Produktu
+              </label>
+              <select
+                name="type"
+                value={formData.type}
+                onChange={handleChange}
+                className="w-full p-3 bg-white border border-stone-200 rounded-xl text-xs font-bold focus:border-amber-500 outline-none transition-all appearance-none"
               >
-                DODAJ
-              </button>
+                <option value="Standardowy Gobelin">Standardowy Gobelin</option>
+                <option value="Mini Gobelin">Mini Gobelin</option>
+                <option value="Panel ścienny">Panel ścienny</option>
+                <option value="Custom Order">Custom Order</option>
+              </select>
             </div>
           </div>
-
-          {formData.similarLinks.map((l, i) => (
-            <div
-              key={i}
-              className="flex justify-between items-start bg-white px-3 py-2 rounded 
-                       border border-stone-200 text-xs gap-3 mb-1"
-            >
-              <div className="overflow-hidden">
-                <p className="font-bold truncate">{l.label || l.url}</p>
-              </div>
-              <button
-                onClick={() => removeLink(i)}
-                className="text-stone-400 hover:text-red-500"
-              >
-                <Trash2 size={12} />
-              </button>
-            </div>
-          ))}
         </div>
+      </section>
 
-        {/* Material & Mounting */}
-        <div className="grid grid-cols-2 gap-6 mb-6">
-          <div>
-            <label className="block text-xs font-bold uppercase text-stone-500 mb-1">
-              Materiał
-            </label>
+      {/* 1. SECTION: VISUAL ASSETS */}
+      <section className="premium-card p-8">
+        <label className="text-xs font-bold uppercase tracking-widest text-stone-400 mb-6 block">01. Baza Wizualna</label>
+
+        <div className="space-y-6">
+          <ImageUploader
+            images={formData.images}
+            onImagesChange={(imgs) => onFormDataChange({ ...formData, images: imgs })}
+          />
+
+          <div className="pt-6 border-t border-stone-100">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h4 className="text-sm font-bold text-stone-700">Wgraj Zdjęcie Własne</h4>
+                <p className="text-[10px] text-stone-400">Opcjonalne tło (np. salon klienta)</p>
+              </div>
+              {referenceBg && (
+                <button onClick={() => onReferenceBgChange(null)} className="text-[10px] font-bold text-red-500 hover:underline flex items-center gap-1">
+                  Usuń <X size={10} />
+                </button>
+              )}
+            </div>
+
+            <div
+              onClick={() => bgInputRef.current?.click()}
+              className={`h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all ${referenceBg ? 'border-amber-400 bg-amber-50/30' : 'border-stone-200 hover:border-amber-300 bg-stone-50'}`}
+            >
+              {referenceBg ? (
+                <div className="flex items-center gap-3">
+                  <img src={referenceBg} className="w-12 h-12 object-cover rounded-lg border border-white shadow-sm" alt="" />
+                  <span className="text-xs text-amber-700 font-bold">Zdjęcie wgrane</span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-1">
+                  <ImageIcon size={20} className="text-stone-300" />
+                  <span className="text-[10px] text-stone-400 font-bold uppercase tracking-tight">Kliknij aby wgrać tło</span>
+                </div>
+              )}
+              <input ref={bgInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const r = new FileReader();
+                  r.onload = () => onReferenceBgChange(r.result as string);
+                  r.readAsDataURL(file);
+                }
+              }} />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 2. SECTION: DIMENSIONS */}
+      <section className="premium-card p-8">
+        <label className="text-xs font-bold uppercase tracking-widest text-stone-400 mb-6 block">02. Specyfikacja & Rozmiar</label>
+
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-stone-500 flex items-center gap-1.5"><Ruler size={10} /> Szerokość</label>
             <input
-              type="text"
-              name="material"
-              value={formData.material}
-              onChange={handleChange}
-              className="w-full p-3 bg-stone-50 border border-stone-200 rounded text-sm"
+              name="widthCm" value={formData.widthCm} onChange={handleChange} placeholder="CM"
+              className="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl text-sm focus:border-amber-500 transition-all font-bold"
             />
           </div>
-          <div>
-            <label className="block text-xs font-bold uppercase text-stone-500 mb-1">
-              Montaż
-            </label>
-            <select
-              name="mounting"
-              value={formData.mounting}
-              onChange={handleChange}
-              className="w-full p-3 bg-stone-50 border border-stone-200 rounded text-sm"
-            >
-              <option value="Bambus">Bambus</option>
-              <option value="Pine Natural">Rama Sosna</option>
-              <option value="Pine Walnut">Rama Orzech</option>
-              <option value="Oak Natural">Rama Dąb</option>
-            </select>
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-stone-500 flex items-center gap-1.5"><Ruler size={10} /> Wysokość</label>
+            <input
+              name="heightCm" value={formData.heightCm} onChange={handleChange} placeholder="CM"
+              className="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl text-sm focus:border-amber-500 transition-all font-bold"
+            />
           </div>
         </div>
 
-        {/* User Hints */}
-        <div className="mb-8">
-          <label className="block text-xs font-bold uppercase text-stone-500 mb-1">
-            Dodatkowe wskazówki dla AI
-          </label>
-          <textarea
-            name="userHints"
-            value={formData.userHints}
-            onChange={handleChange}
-            placeholder="np. Styl Japandi, pastele, inspiracja naturą..."
-            className="w-full p-3 bg-stone-50 border border-stone-200 rounded text-sm min-h-[80px]"
-          />
-        </div>
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <label className="text-[10px] font-black uppercase text-stone-500">Szybkie Wymiary (Presets)</label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {PRESETS.map((preset) => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => addPresetSize(preset.w, preset.h)}
+                  className="py-2.5 px-3 bg-stone-50 border border-stone-100 rounded-xl text-[10px] font-bold text-stone-600 hover:bg-amber-50 hover:border-amber-200 hover:text-amber-700 transition-all text-left flex flex-col"
+                >
+                  <span>{preset.label}</span>
+                  <span className="text-[8px] opacity-60">Dodaj do listy</span>
+                </button>
+              ))}
+            </div>
+          </div>
 
-        {/* Submit Button */}
-        <button
-          onClick={onSubmit}
-          disabled={isLoading || formData.images.length === 0 || !formData.name}
-          className={`w-full py-5 rounded-xl flex items-center justify-center gap-2 
-                   font-bold text-xl transition-all shadow-lg ${
-                     isLoading || formData.images.length === 0 || !formData.name
-                       ? 'bg-stone-200 text-stone-500 cursor-not-allowed'
-                       : 'bg-stone-900 text-white hover:bg-black hover:scale-[1.01]'
-                   }`}
-        >
-          {isLoading ? (
-            <>
-              <span className="animate-spin">⚡</span>
-              Generowanie...
-            </>
-          ) : (
-            <>
-              ⚡ GENERUJ AUKCJĘ
-            </>
-          )}
-        </button>
-      </div>
+          <div className="space-y-3 pt-6 border-t border-stone-100">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-black uppercase text-stone-500">Twoja Lista Wariantów</label>
+              <div className="flex gap-1 items-center bg-stone-100 pr-1 rounded-full border border-stone-200">
+                <input
+                  value={tempSize.w} onChange={e => setTempSize({ ...tempSize, w: e.target.value })}
+                  onKeyDown={e => e.key === 'Enter' && addSize()}
+                  placeholder="W" className="w-10 bg-transparent text-[10px] font-bold text-center focus:outline-none"
+                />
+                <span className="text-stone-300">×</span>
+                <input
+                  value={tempSize.h} onChange={e => setTempSize({ ...tempSize, h: e.target.value })}
+                  onKeyDown={e => e.key === 'Enter' && addSize()}
+                  placeholder="H" className="w-10 bg-transparent text-[10px] font-bold text-center focus:outline-none"
+                />
+                <button onClick={addSize} className="p-1 bg-white rounded-full text-stone-900 hover:text-amber-500 shadow-sm"><Plus size={14} /></button>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 pt-2">
+              {formData.additionalSizes.length === 0 && (
+                <span className="text-[10px] text-stone-400 italic">Brak dodatkowych wymiarów...</span>
+              )}
+              {formData.additionalSizes.map((s, i) => (
+                <span key={i} className="flex items-center gap-2 bg-stone-900 text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-sm">
+                  {s.width}x{s.height} cm
+                  <button onClick={() => removeSize(i)} className="hover:text-amber-500"><X size={12} /></button>
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. SECTION: CHARACTERISTICS */}
+      <section className="premium-card p-8">
+        <label className="text-xs font-bold uppercase tracking-widest text-stone-400 mb-6 block">03. Detale Projektu</label>
+
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase text-stone-500 flex items-center gap-1.5"><MapPin size={10} /> Sklep</label>
+              <select
+                name="shop" value={formData.shop} onChange={handleChange}
+                className="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl text-sm focus:border-amber-500 transition-all font-medium appearance-none"
+              >
+                <option value="LaleStudio">Lale Studio</option>
+                <option value="SplotyFantazji">Sploty Fantazji</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase text-stone-500 flex items-center gap-1.5"><Settings2 size={10} /> Montaż</label>
+              <select
+                name="mounting" value={formData.mounting} onChange={handleChange}
+                className="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl text-sm focus:border-amber-500 transition-all font-medium appearance-none"
+              >
+                <option value="Bambus">Bambusowy Drążek</option>
+                <option value="Ramka">Drewniana Ramka</option>
+                <option value="Brak">Brak Montażu</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-stone-500 flex items-center gap-1.5"><Palette size={10} /> Kolorystyka & Styl</label>
+            <input
+              name="colors" value={formData.colors} onChange={handleChange}
+              placeholder="np. Szałwia, ciepły dąb, ecru, słońce..."
+              className="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl text-sm focus:border-amber-500 transition-all font-medium"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-stone-500 flex items-center gap-1.5"><Sparkles size={10} /> Wskazówki dla AI</label>
+            <textarea
+              name="userHints" value={formData.userHints} onChange={handleChange}
+              placeholder="Opisz unikalny klimat tego gobelinu..."
+              className="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl text-sm focus:border-amber-500 transition-all font-medium min-h-[100px] resize-none"
+            />
+          </div>
+
+          {/* SIMILAR LINKS SECTION (DODATKI) */}
+          <div className="space-y-4 pt-6 border-t border-stone-100">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-black uppercase text-stone-500 flex items-center gap-1.5"><Link size={10} /> Podobne Produkty (Linki)</label>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2">
+                <input
+                  value={tempLink.url} onChange={e => setTempLink({ ...tempLink, url: e.target.value })}
+                  onKeyDown={e => e.key === 'Enter' && addLink()}
+                  placeholder="Wklej URL do Etsy..."
+                  className="flex-1 p-3 bg-stone-50 border border-stone-100 rounded-xl text-xs focus:border-amber-400 outline-none"
+                />
+                <input
+                  value={tempLink.label} onChange={e => setTempLink({ ...tempLink, label: e.target.value })}
+                  onKeyDown={e => e.key === 'Enter' && addLink()}
+                  placeholder="Etykieta"
+                  className="w-32 p-3 bg-stone-50 border border-stone-100 rounded-xl text-xs focus:border-amber-400 outline-none"
+                />
+                <button onClick={addLink} className="p-3 bg-amber-500 text-white rounded-xl hover:bg-amber-600 shadow-sm"><Plus size={20} /></button>
+              </div>
+
+              <div className="flex flex-col gap-2 mt-2">
+                {formData.similarLinks.map((link, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 bg-stone-900 text-white rounded-xl shadow-sm border border-white/10 group">
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-[10px] font-bold text-amber-400 capitalize">{link.label || 'Produkt'}</span>
+                      <span className="text-[9px] opacity-60 truncate max-w-[200px]">{link.url}</span>
+                    </div>
+                    <button onClick={() => removeLink(i)} className="p-2 text-white/40 hover:text-red-400 transition-colors">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SUBMIT BUTTON */}
+      <button
+        onClick={onSubmit}
+        disabled={isLoading}
+        className="w-full py-6 bg-stone-900 hover:bg-black text-white rounded-[24px] font-bold text-lg shadow-2xl flex items-center justify-center gap-4 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:bg-stone-200 disabled:text-stone-400 group overflow-hidden relative"
+      >
+        <div className="absolute inset-0 bg-amber-500/0 group-hover:bg-amber-500/10 transition-colors"></div>
+        {isLoading ? (
+          <>
+            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+            Analizowanie Projektu...
+          </>
+        ) : (
+          <>
+            <Wand2 size={24} className="text-amber-500 group-hover:rotate-12 transition-transform" />
+            <span>Generuj Strategię Etsy</span>
+          </>
+        )}
+      </button>
     </div>
   );
 };

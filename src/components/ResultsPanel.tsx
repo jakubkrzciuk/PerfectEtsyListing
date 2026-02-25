@@ -1,12 +1,12 @@
 // ============================================
 // RESULTS PANEL COMPONENT
-// All generated content display
+// Premium layout for 2026 Studio Experience
 // ============================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   BarChart3, FileText, Eye, Sparkles, Save, Plus,
-  RefreshCw, CheckCircle2
+  RefreshCw, CheckCircle2, Image as ImageIcon, Video, MessageSquare, Tags, Search, Share2
 } from 'lucide-react';
 import type { FormData, GeneratedContent, HistoryItem, SeoAnalysis } from '../types';
 import { SeoScore } from './SeoScore';
@@ -14,10 +14,12 @@ import { TitleBuilder } from './TitleBuilder';
 import { TagsEditor } from './TagsEditor';
 import { EtsyPreview } from './EtsyPreview';
 import { MockupGenerator } from './MockupGenerator';
+import { VideoGenerator } from './VideoGenerator';
+import { MarketingStudio } from './MarketingStudio';
+import { PerformancePredictor } from './PerformancePredictor';
 import { useAI } from '../hooks/useAI';
 import { useClipboard } from '../hooks/useClipboard';
 import { buildReanalysisPrompt } from '../config/prompts';
-
 import type { InspirationItem } from '../hooks/useInspirations';
 
 interface ResultsPanelProps {
@@ -31,6 +33,8 @@ interface ResultsPanelProps {
   selectedInspiration?: InspirationItem | null;
   inspirations?: InspirationItem[];
   onSelectInspiration?: (item: InspirationItem | null) => void;
+  onAddImage: (img: string) => void;
+  isSaving: boolean;
 }
 
 export const ResultsPanel: React.FC<ResultsPanelProps> = ({
@@ -44,208 +48,195 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
   selectedInspiration,
   inspirations,
   onSelectInspiration,
+  onAddImage,
+  isSaving,
 }) => {
-  const [titleParts, setTitleParts] = useState(result.titleSegments || {
-    hooks: '', features: '', vibe: '', name: ''
-  });
-  const { copy, isCopied } = useClipboard();
-  const { reanalyze, isLoading: isReanalyzing } = useAI();
+  const [activeSubTab, setActiveSubTab] = useState<'visuals' | 'social' | 'listing' | 'analyze' | 'market'>('visuals');
+  const [isReanalyzing, setIsReanalyzing] = useState(false);
+  const { generateListing } = useAI();
+  const { copy } = useClipboard();
 
-  // Sync title parts with result
-  useEffect(() => {
-    if (result.titleSegments) {
-      setTitleParts(result.titleSegments);
-    }
-  }, [result.titleSegments]);
-
-  // Reconstruct title from parts
-  useEffect(() => {
-    const parts = [titleParts.hooks, titleParts.features, titleParts.vibe, titleParts.name]
-      .filter(p => p.trim());
-    const newTitle = parts.join(' | ');
-
-    if (newTitle !== result.title) {
-      onResultChange({ ...result, title: newTitle });
-    }
-  }, [titleParts, result.title, onResultChange]);
-
-  const handleReanalysis = async () => {
+  const handleReanalyze = async () => {
+    setIsReanalyzing(true);
     try {
       const prompt = buildReanalysisPrompt(result.title, result.tags, result.description);
-      const jsonText = await reanalyze(prompt);
-
-      const parsed = JSON.parse(jsonText);
-      onResultChange({
-        ...result,
-        marketAnalysis: parsed.marketAnalysis,
-        keywordStrategy: parsed.keywordStrategy
-      });
+      const newListingJson = await generateListing(prompt, [], formData.name);
+      const newListing: GeneratedContent = JSON.parse(newListingJson);
+      onResultChange(newListing);
     } catch (err) {
-      console.error('Reanalysis error:', err);
-      alert('Błąd analizy. Spróbuj ponownie.');
-    }
-  };
-
-  const handleCopyTitle = () => {
-    copy(result.title, 'title');
-  };
-
-  const handleCopyDescription = () => {
-    copy(result.description, 'desc');
-  };
-
-  const handleCopyTags = () => {
-    copy(result.tags.join(', '), 'tags');
-  };
-
-  const handleCopyAltText = () => {
-    if (result.altText) {
-      copy(result.altText, 'alt');
+      console.error(err);
+    } finally {
+      setIsReanalyzing(false);
     }
   };
 
   return (
-    <div className="space-y-6">
-      {/* SEO Score */}
-      <SeoScore analysis={seoAnalysis} />
-
-      {/* Mockup Generator */}
-      <MockupGenerator
-        formData={formData}
-        generationMode="replace"
-        referenceBg={null}
-        photoScore={result.photoScore}
-        photoSuggestions={result.photoSuggestions}
-        selectedInspiration={selectedInspiration}
-        inspirations={inspirations}
-        onSelectInspiration={onSelectInspiration}
-      />
-
-      {/* Etsy Preview */}
-      <EtsyPreview
-        title={result.title}
-        mainImage={formData.images[0]}
-      />
-
-      {/* Title Builder */}
-      <TitleBuilder
-        title={result.title}
-        segments={titleParts}
-        onSegmentsChange={setTitleParts}
-        onCopy={handleCopyTitle}
-      />
-
-      {/* Alt Text */}
-      {result.altText && (
-        <div className="bg-stone-50 p-6 rounded-xl border border-stone-200">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="text-xs font-bold uppercase text-stone-500 tracking-wide flex items-center gap-2">
-              <Eye size={12} /> Alt Text (dla SEO)
-            </h3>
-            <button
-              onClick={handleCopyAltText}
-              className={`text-xs font-bold transition-colors ${isCopied('alt') ? 'text-green-600' : 'text-amber-600 hover:underline'
-                }`}
-            >
-              {isCopied('alt') ? 'Skopiowano!' : 'Kopiuj'}
-            </button>
-          </div>
-          <p className="text-sm text-stone-700 font-mono bg-white p-3 rounded border border-stone-100 italic">
-            &quot;{result.altText}&quot;
-          </p>
+    <div className="space-y-8 animate-fade-in pb-12">
+      {/* Top Banner: SEO Score & Quick Actions */}
+      <div className="bg-white rounded-[32px] p-2 pr-6 border border-stone-200/60 shadow-sm flex items-center justify-between gap-4">
+        <div className="flex-1">
+          <SeoScore analysis={seoAnalysis} />
         </div>
-      )}
-
-      {/* Market Analysis */}
-      <div className="bg-indigo-900 text-indigo-100 p-6 rounded-xl shadow-lg border border-indigo-700 relative overflow-hidden">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-bold font-serif flex items-center gap-2">
-            <BarChart3 className="text-indigo-400" />
-            Analiza Rynkowa
-          </h3>
+        <div className="flex gap-2">
           <button
-            onClick={handleReanalysis}
-            disabled={isReanalyzing}
-            className="bg-white text-indigo-900 px-3 py-1 rounded text-xs font-bold hover:bg-indigo-50 disabled:opacity-50"
+            onClick={onNew}
+            className="p-3 bg-stone-100 text-stone-900 rounded-2xl hover:bg-stone-200 transition-all font-bold text-sm flex items-center gap-2"
           >
-            {isReanalyzing ? 'Analizowanie...' : 'Sprawdź zmiany'}
+            <Plus size={18} /> <span className="hidden sm:inline">Nowy Projekt</span>
+          </button>
+          <button
+            onClick={onSave}
+            disabled={isSaving}
+            className="p-3 bg-amber-500 text-stone-900 rounded-2xl hover:bg-amber-600 transition-all font-bold text-sm flex items-center gap-2 shadow-lg shadow-amber-500/20 disabled:opacity-50"
+          >
+            {isSaving ? <RefreshCw size={18} className="animate-spin" /> : <Save size={18} />}
+            <span>{isSaving ? 'Zapisywanie...' : 'Zapisz Projekt'}</span>
           </button>
         </div>
-        <div className="prose prose-invert prose-sm max-w-none font-mono text-xs whitespace-pre-wrap text-indigo-200">
-          {result.marketAnalysis}
-        </div>
-        {result.keywordStrategy && (
-          <div className="mt-4 pt-4 border-t border-indigo-700">
-            <h4 className="text-xs font-bold uppercase text-indigo-300 mb-2">Strategia słów kluczowych:</h4>
-            <p className="text-xs text-indigo-200 whitespace-pre-wrap">{result.keywordStrategy}</p>
+      </div>
+
+      {/* Results Sub-Tabs */}
+      <div className="flex p-1.5 bg-stone-200/50 rounded-[22px] w-fit mx-auto lg:mx-0">
+        <button
+          onClick={() => setActiveSubTab('visuals')}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-[18px] text-sm font-bold transition-all ${activeSubTab === 'visuals' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500 hover:text-stone-800'}`}
+        >
+          <ImageIcon size={18} /> Studio Wizualne
+        </button>
+        <button
+          onClick={() => setActiveSubTab('social')}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-[18px] text-sm font-bold transition-all ${activeSubTab === 'social' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500 hover:text-stone-800'}`}
+        >
+          <Share2 size={18} /> Social Media
+        </button>
+        <button
+          onClick={() => setActiveSubTab('listing')}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-[18px] text-sm font-bold transition-all ${activeSubTab === 'listing' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500 hover:text-stone-800'}`}
+        >
+          <FileText size={18} /> Gotowy Listing
+        </button>
+        <button
+          onClick={() => setActiveSubTab('analyze')}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-[18px] text-sm font-bold transition-all ${activeSubTab === 'analyze' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500 hover:text-stone-800'}`}
+        >
+          <Search size={18} /> Warsztat Copywritingu
+        </button>
+        <button
+          onClick={() => setActiveSubTab('market')}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-[18px] text-sm font-bold transition-all ${activeSubTab === 'market' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500 hover:text-stone-800'}`}
+        >
+          <BarChart3 size={18} /> Prognoza Sukcesu
+        </button>
+      </div>
+
+      {/* Content Area */}
+      <div className="space-y-8">
+        {activeSubTab === 'visuals' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start animate-fade-in">
+            <div className="space-y-6">
+              <MockupGenerator
+                formData={formData}
+                generationMode="replace"
+                referenceBg={null}
+                photoScore={result.photoScore}
+                photoSuggestions={result.photoSuggestions}
+                selectedInspiration={selectedInspiration}
+                inspirations={inspirations}
+                onSelectInspiration={onSelectInspiration}
+                onAddImage={onAddImage}
+              />
+            </div>
+            <div className="space-y-6">
+              <VideoGenerator formData={formData} />
+
+              <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-sm">
+                <h4 className="flex items-center gap-2 font-bold text-stone-700 text-sm mb-4">
+                  <MessageSquare size={16} className="text-amber-500" /> AI Alt Text (SEO Zdjęć)
+                </h4>
+                <p className="text-xs text-stone-500 leading-relaxed mb-4 bg-stone-50 p-4 rounded-xl border border-stone-100 italic">
+                  "{result.altText || "Alt text description is missing... Generuj mockup, aby uzyskać opis."}"
+                </p>
+                <button
+                  onClick={() => copy(result.altText || '', 'alt')}
+                  className="w-full py-3 bg-stone-900 text-white rounded-xl text-xs font-bold hover:bg-black transition-colors"
+                >
+                  Kopiuj Alt Text
+                </button>
+              </div>
+            </div>
           </div>
         )}
-      </div>
 
-      {/* Description */}
-      <div className="bg-white p-8 rounded-xl shadow-sm border border-stone-200">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-sm font-bold uppercase text-stone-500">Opis</h3>
-          <div className="flex gap-2">
-            <span className={`text-xs px-2 py-1 rounded ${result.description.length >= 1000
-              ? 'bg-green-100 text-green-700'
-              : 'bg-red-100 text-red-700'
-              }`}>
-              {result.description.length} znaków
-            </span>
-            <button
-              onClick={handleCopyDescription}
-              className={`text-xs px-3 py-1 rounded font-bold transition-colors ${isCopied('desc')
-                ? 'bg-green-100 text-green-700'
-                : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                }`}
-            >
-              {isCopied('desc') ? 'Skopiowano!' : 'KOPIUJ'}
-            </button>
+        {activeSubTab === 'social' && (
+          <div className="animate-fade-in">
+            <MarketingStudio
+              mainImage={formData.images[0]}
+              productName={formData.name || 'Handwoven Tapestry'}
+            />
           </div>
-        </div>
-        <textarea
-          className="w-full text-stone-600 text-sm bg-stone-50 p-4 rounded border border-stone-100 min-h-[400px] font-mono whitespace-pre-wrap resize-y"
-          value={result.description}
-          onChange={(e) => onResultChange({ ...result, description: e.target.value })}
-        />
-      </div>
+        )}
 
-      {/* Tags */}
-      <TagsEditor
-        result={result}
-        onResultChange={onResultChange}
-        powerKeywords={powerKeywords}
-      />
-
-      {/* Colors */}
-      {result.colors && result.colors.length > 0 && (
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
-          <h3 className="text-sm font-bold uppercase text-stone-500 mb-3">Wykryte kolory</h3>
-          <div className="flex flex-wrap gap-2">
-            {result.colors.map((color, i) => (
-              <span key={i} className="px-3 py-1 bg-stone-100 text-stone-600 text-xs rounded-full">
-                {color}
-              </span>
-            ))}
+        {activeSubTab === 'listing' && (
+          <div className="animate-fade-in space-y-8">
+            <EtsyPreview
+              title={result.title}
+              description={result.description}
+              tags={result.tags}
+              images={formData.images}
+              shop={formData.shop}
+            />
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Action Buttons */}
-      <div className="flex gap-4">
-        <button
-          onClick={onSave}
-          className="flex-1 py-4 bg-green-600 text-white rounded-xl font-bold shadow hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
-        >
-          <Save size={18} /> Zapisz w historii
-        </button>
-        <button
-          onClick={onNew}
-          className="flex-1 py-4 bg-white border-2 border-stone-300 text-stone-600 rounded-xl font-bold hover:bg-stone-50 transition-colors"
-        >
-          <Plus size={18} className="inline mr-2" /> Nowy produkt
-        </button>
+        {activeSubTab === 'analyze' && (
+          <div className="animate-fade-in space-y-8">
+            <div className="grid grid-cols-1 gap-8">
+              <div className="premium-card p-8">
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <h4 className="text-xl font-bold text-stone-900 font-serif">Konstruktor Tytułu</h4>
+                    <p className="text-sm text-stone-500">Złóż perfekcyjny tytuł z bloków słów kluczowych</p>
+                  </div>
+                  <button onClick={handleReanalyze} disabled={isReanalyzing} className="p-2.5 bg-amber-100 text-amber-700 rounded-xl hover:bg-amber-200 transition-all">
+                    {isReanalyzing ? <RefreshCw size={18} className="animate-spin" /> : <RefreshCw size={18} />}
+                  </button>
+                </div>
+                <TitleBuilder result={result} onUpdate={onResultChange} />
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="premium-card p-8">
+                  <h4 className="text-lg font-bold text-stone-900 mb-6 flex items-center gap-2">
+                    <Tags size={20} className="text-amber-500" /> Słowa Kluczowe (Meta)
+                  </h4>
+                  <TagsEditor
+                    tags={result.tags}
+                    powerKeywords={powerKeywords}
+                    onUpdate={(newTags) => onResultChange({ ...result, tags: newTags })}
+                  />
+                </div>
+
+                <div className="premium-card p-8">
+                  <h4 className="text-lg font-bold text-stone-900 mb-6 flex items-center gap-2">
+                    <FileText size={20} className="text-amber-500" /> Pełny Opis Produktu
+                  </h4>
+                  <div className="max-h-[500px] overflow-y-auto pr-4 text-stone-600 text-sm leading-relaxed whitespace-pre-wrap select-all font-mono bg-stone-50 p-6 rounded-2xl border border-stone-100">
+                    {result.description}
+                  </div>
+                  <button
+                    onClick={() => copy(result.description, 'description')}
+                    className="w-full mt-4 py-4 bg-stone-900 text-white rounded-2xl font-bold hover:bg-black transition-all flex items-center justify-center gap-3"
+                  >
+                    Kopiuj Opis do Etsy
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {activeSubTab === 'market' && (
+          <PerformancePredictor result={result} seoAnalysis={seoAnalysis} />
+        )}
       </div>
     </div>
   );

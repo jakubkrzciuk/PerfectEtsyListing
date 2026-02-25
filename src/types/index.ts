@@ -72,6 +72,7 @@ export interface HistoryItem {
   title: string;
   tags: string[];
   name: string;
+  altText?: string;
   colors?: string[];
   platforms: PlatformStatus;
   description?: string;

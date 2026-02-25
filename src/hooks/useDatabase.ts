@@ -113,6 +113,7 @@ export const useDatabase = (userId: string | undefined) => {
                 photoCritique: row.photo_critique || '',
                 photoSuggestions: row.photo_suggestions || [],
                 formData: row.form_data || null,
+                altText: row.alt_text || '',
             }));
 
             setItems(mapped);
@@ -159,6 +160,7 @@ export const useDatabase = (userId: string | undefined) => {
             tags: item.tags,
             colors: item.colors,
             thumbnails: thumbnailUrls,
+            alt_text: item.altText || '',
             platforms: item.platforms,
             description: item.description,
             market_analysis: item.marketAnalysis,

@@ -99,13 +99,20 @@ export const useAI = (options: UseAIOptions = {}) => {
     try {
       const ai = getAI();
 
-      const parts: any[] = [
-        { inlineData: { mimeType: productImage.mimeType, data: productImage.data } }
-      ];
+      const parts: any[] = [];
+
+      // DODAJ INSTRUKCJE NA POCZĄTEK (Kluczowe dla Nano Banana)
+      parts.push({ text: `TASK: IN-PAINTING / IMAGE COMPOSITION\n\nCORE INSTRUCTIONS:\n${systemPrompt}\n\n${userPrompt}` });
+
+      // Dodaj produkt z wyraźną etykietą
+      parts.push({ text: "IMAGE 1 (PRODUCT TO BE PLACED):" });
+      parts.push({ inlineData: { mimeType: productImage.mimeType, data: productImage.data } });
+
+      // Dodaj tło z wyraźną etykietą (jeśli istnieje)
       if (backgroundImage) {
+        parts.push({ text: "IMAGE 2 (BACKGROUND SCENE):" });
         parts.push({ inlineData: { mimeType: backgroundImage.mimeType, data: backgroundImage.data } });
       }
-      parts.push({ text: `${systemPrompt}\n\n${userPrompt}` });
 
       const result: any = await retryOperation(
         () => ai.models.generateContent({
@@ -238,6 +245,46 @@ export const useAI = (options: UseAIOptions = {}) => {
     }
   }, [getAI, options]);
 
+  // ============================================
+  // GENEROWANIE TREŚCI SOCIAL MEDIA
+  // ============================================
+  const generateSocialContent = useCallback(async (
+    productInfo: string,
+    platform: string
+  ): Promise<string> => {
+    setIsLoading(true);
+    setError(null);
+    setStatus(`Generowanie treści dla ${platform}...`);
+
+    try {
+      const ai = getAI();
+      const systemPrompt = `You are a Social Media Manager for LALE STUDIO, a luxury Japandi/Wabi-Sabi textile art brand.
+TONE: Minimalist, warm, contemplative, artistic. NOT AGGRESSIVE SALES.
+TASK: Generate an engaging caption and a set of hashtags for ${platform}.
+CONTENT: Based on product: ${productInfo}.
+FORMAT: Return plain text with Caption and Hashtag sections. 
+LEAN: Focus on the hand-woven texture, natural materials, and the peace it brings to any home.`;
+
+      const result: any = await retryOperation(
+        () => ai.models.generateContent({
+          model: AI_MODELS.TEXT,
+          contents: [{ role: 'user', parts: [{ text: `Create viral ${platform} content for Lale Studio.` }] }],
+          config: { systemInstruction: systemPrompt }
+        }),
+        { maxRetries: 2, delay: 2000 }
+      );
+
+      setStatus('');
+      return result.text ?? '';
+    } catch (err: any) {
+      const errorMsg = handleAIError(err);
+      setError(errorMsg);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [getAI]);
+
   const clearError = useCallback(() => setError(null), []);
 
   return {
@@ -247,6 +294,7 @@ export const useAI = (options: UseAIOptions = {}) => {
     generateListing,
     generateMockup,
     generateEmptyBackground,
+    generateSocialContent,
     reanalyze,
     clearError
   };

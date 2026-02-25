@@ -10,7 +10,7 @@ import type { InspirationItem } from '../hooks/useInspirations';
 interface InspirationsTabProps {
     items: InspirationItem[];
     loading: boolean;
-    onAdd: (base64: string, name: string, style: string) => Promise<void>;
+    onAdd: (base64: string, name: string, style: string, type: 'with_product' | 'empty', originalDimensions: string) => Promise<void>;
     onRemove: (id: string) => void;
     selectedId: string | null;
     onSelect: (item: InspirationItem | null) => void;
@@ -23,6 +23,8 @@ export const InspirationsTab: React.FC<InspirationsTabProps> = ({
     const [preview, setPreview] = useState<string | null>(null);
     const [name, setName] = useState('');
     const [style, setStyle] = useState('');
+    const [type, setType] = useState<'with_product' | 'empty'>('empty');
+    const [originalDimensions, setOriginalDimensions] = useState('');
     const [saving, setSaving] = useState(false);
     const fileRef = useRef<HTMLInputElement>(null);
 
@@ -38,10 +40,12 @@ export const InspirationsTab: React.FC<InspirationsTabProps> = ({
         if (!preview || !name) return;
         setSaving(true);
         try {
-            await onAdd(preview, name, style || name);
+            await onAdd(preview, name, style || name, type, originalDimensions);
             setPreview(null);
             setName('');
             setStyle('');
+            setType('empty');
+            setOriginalDimensions('');
             setShowForm(false);
         } catch {
             alert('Błąd podczas zapisywania. Spróbuj ponownie.');
@@ -107,6 +111,39 @@ export const InspirationsTab: React.FC<InspirationsTabProps> = ({
                                     className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl text-sm focus:outline-none focus:border-amber-400"
                                 />
                             </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-bold uppercase text-stone-500 mb-1.5">Typ scenerii</label>
+                                    <div className="flex bg-stone-100 p-1 rounded-xl">
+                                        <button
+                                            type="button"
+                                            onClick={() => setType('empty')}
+                                            className={`flex-1 py-2 text-[10px] font-bold rounded-lg transition-all ${type === 'empty' ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-400'}`}
+                                        >
+                                            Pusta ściana
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setType('with_product')}
+                                            className={`flex-1 py-2 text-[10px] font-bold rounded-lg transition-all ${type === 'with_product' ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-400'}`}
+                                        >
+                                            Z gobelinem
+                                        </button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold uppercase text-stone-500 mb-1.5">Rozmiar na foto</label>
+                                    <input
+                                        type="text"
+                                        value={originalDimensions}
+                                        onChange={e => setOriginalDimensions(e.target.value)}
+                                        placeholder="np. 80x100cm"
+                                        disabled={type === 'empty'}
+                                        className="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-xl text-sm focus:outline-none focus:border-amber-400 disabled:opacity-40"
+                                    />
+                                </div>
+                            </div>
                             <div>
                                 <label className="block text-xs font-bold uppercase text-stone-500 mb-1.5">
                                     Opis stylu (dla AI)
@@ -162,8 +199,8 @@ export const InspirationsTab: React.FC<InspirationsTabProps> = ({
                         <div
                             key={item.id}
                             className={`relative rounded-2xl overflow-hidden cursor-pointer group border-2 transition-all ${selectedId === item.id
-                                    ? 'border-amber-400 shadow-lg shadow-amber-100'
-                                    : 'border-transparent hover:border-stone-300'
+                                ? 'border-amber-400 shadow-lg shadow-amber-100'
+                                : 'border-transparent hover:border-stone-300'
                                 }`}
                             onClick={() => onSelect(selectedId === item.id ? null : item)}
                         >
@@ -184,6 +221,18 @@ export const InspirationsTab: React.FC<InspirationsTabProps> = ({
                                     </div>
                                 </div>
                             )}
+
+                            {/* Type badge */}
+                            <div className="absolute top-2 left-2 flex flex-col gap-1">
+                                <div className={`text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest text-white shadow-sm ${item.type === 'with_product' ? 'bg-rose-500' : 'bg-green-500'}`}>
+                                    {item.type === 'with_product' ? 'Do podmiany' : 'Pusta ściana'}
+                                </div>
+                                {item.originalDimensions && (
+                                    <div className="bg-black/60 text-white text-[8px] px-2 py-0.5 rounded-full backdrop-blur-sm">
+                                        Rozmiar: {item.originalDimensions}
+                                    </div>
+                                )}
+                            </div>
 
                             {/* Info + delete */}
                             <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent p-3">
