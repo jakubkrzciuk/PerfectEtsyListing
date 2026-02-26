@@ -7,12 +7,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
     Film, Play, Download, Loader2, Sparkles, AlertCircle,
     Plus, Trash2, Clock, Settings2, Instagram, Scissors,
-    MoveLeft, MoveRight, Layers, Layout, Maximize, Smartphone
+    MoveLeft, MoveRight, Layers, Layout, Maximize, Smartphone, CheckCircle2
 } from 'lucide-react';
 import type { FormData } from '../types';
 
 interface VideoGeneratorProps {
     formData: FormData;
+    onAddVideo?: (videoUrl: string) => void;
 }
 
 interface VideoFrame {
@@ -34,6 +35,7 @@ export const VideoGenerator: React.FC<VideoGeneratorProps> = ({ formData }) => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [progress, setProgress] = useState(0);
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
+    const [added, setAdded] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -337,22 +339,41 @@ export const VideoGenerator: React.FC<VideoGeneratorProps> = ({ formData }) => {
                                 >
                                     <video src={videoUrl} controls autoPlay loop className="w-full h-full object-cover" />
                                 </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <button
-                                        onClick={() => setVideoUrl(null)}
-                                        className="py-4 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-2xl text-[10px] font-black uppercase transition-all"
-                                    >
-                                        Edytuj Projekt
-                                    </button>
-                                    <a
-                                        href={videoUrl}
-                                        download={`${formData.name || 'Lale-Studio'}-video.webm`}
-                                        className="py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
-                                    >
-                                        <Download size={14} /> Pobierz 4K
-                                    </a>
-                                </div>
-                            </div>
+                <div className="flex flex-col gap-3">
+                    <div className="grid grid-cols-2 gap-3">
+                        <button
+                            onClick={() => setVideoUrl(null)}
+                            className="py-4 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-2xl text-[10px] font-black uppercase transition-all"
+                        >
+                            Edytuj Projekt
+                        </button>
+                        <a
+                            href={videoUrl}
+                            download={`${formData.name || 'Lale-Studio'}-video.webm`}
+                            className="py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
+                        >
+                            <Download size={14} /> Pobierz 4K
+                        </a>
+                    </div>
+                    <button
+                        onClick={() => {
+                            if (videoUrl) {
+                                onAddVideo?.(videoUrl);
+                                setAdded(true);
+                            }
+                        }}
+                        disabled={added}
+                        className={`w-full py-4 rounded-2xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${
+                            added 
+                            ? 'bg-green-100 text-green-700 border border-green-200' 
+                            : 'bg-stone-900 text-white hover:bg-black shadow-lg shadow-stone-900/10'
+                        }`}
+                    >
+                        {added ? <CheckCircle2 size={14} /> : <Plus size={14} />}
+                        {added ? 'Zapisano w projekcie' : 'Zapisz Film w projekcie'}
+                    </button>
+                </div>
+            </div>
                         ) : (
                             <div
                                 className="w-full max-w-[320px] rounded-[48px] border-2 border-dashed border-stone-200 bg-stone-50/30 flex flex-col items-center justify-center p-12 text-center"

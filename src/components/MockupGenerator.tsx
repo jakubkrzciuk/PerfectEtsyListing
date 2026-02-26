@@ -4,7 +4,11 @@
 // ============================================
 
 import React, { useState } from 'react';
-import { Camera, Wand2, Loader2, Download, AlertTriangle, Heart, Sparkles, CheckCircle2, Plus, RefreshCw } from 'lucide-react';
+import { 
+  Camera, Wand2, Loader2, Download, AlertTriangle, Heart, Sparkles, 
+  CheckCircle2, Plus, RefreshCw, Sun, Contrast, Palette, Thermometer, 
+  Moon, Search, Sliders, Check 
+} from 'lucide-react';
 import type { FormData, GenerationMode } from '../types';
 import { useAI } from '../hooks/useAI';
 import { buildMockupSystemPrompt, buildMockupUserPrompt } from '../config/prompts';
@@ -88,7 +92,18 @@ export const MockupGenerator: React.FC<MockupGeneratorProps> = ({
   const [selectedSize, setSelectedSize] = useState<string>('M');
   const [productContext, setProductContext] = useState<string>(formData.name || '');
   const isReplacementMode = selectedInspiration?.type === 'with_product';
-  const { generateMockup, generateEmptyBackground, status, error } = useAI();
+  
+  // POST-PRODUKCJA (Lightroom)
+  const [brightness, setBrightness] = useState(100);
+  const [contrast, setContrast] = useState(100);
+  const [saturate, setSaturate] = useState(100);
+  const [temp, setTemp] = useState(0); // Hue-rotate / Color balance surrogate
+  const [sharpness, setSharpness] = useState(0); // CSS surrogate for contrast/brightness trick
+  const [isEditingAI, setIsEditingAI] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(false);
+  const [aiEditPrompt, setAiEditPrompt] = useState('');
+
+  const { generateMockup, generateEmptyBackground, editImage, analyzeImageForEnhancement, status, error } = useAI();
 
   const getPlacementDesc = () => {
     const p = PLACEMENTS.find(p => p.id === selectedPlacement);
@@ -162,6 +177,49 @@ export const MockupGenerator: React.FC<MockupGeneratorProps> = ({
     }
   };
 
+  const handleAIEdit = async (key: string) => {
+    const currentImage = generatedImages[key];
+    if (!currentImage || !aiEditPrompt) return;
+
+    setGeneratingFor(key);
+    setIsEditingAI(true);
+
+    try {
+      const systemPrompt = `You are a professional Interior Photographer and AI Editor.
+      TASK: Modify the existing scene according to user instructions.
+      CRITICAL: Do NOT move or resize the product on the wall. Only change lighting, environment, time of day, or colors of walls/furniture.
+      STYLE: Pinterest-ready, high-end photography.`;
+
+      const editedUrl = await editImage(currentImage, aiEditPrompt, systemPrompt);
+      setGeneratedImages(prev => ({ ...prev, [key]: editedUrl }));
+      setAiEditPrompt('');
+    } catch (err) {
+      console.error('AI Edit failed:', err);
+    } finally {
+      setGeneratingFor(null);
+      setIsEditingAI(false);
+    }
+  };
+
+  const handleMagicEnhance = async (key: string) => {
+    const currentImage = generatedImages[key];
+    if (!currentImage) return;
+
+    setIsEnhancing(true);
+    try {
+        const settings = await analyzeImageForEnhancement(currentImage);
+        setBrightness(settings.brightness);
+        setContrast(settings.contrast);
+        setSaturate(settings.saturate);
+        setTemp(settings.temp);
+        setSharpness(10); // Auto-sharpen bit
+    } catch (err) {
+        console.error('Enhance failed:', err);
+    } finally {
+        setIsEnhancing(false);
+    }
+  };
+
   const downloadImage = (imageUrl: string, filename: string) => {
     const link = document.createElement('a');
     link.href = imageUrl;
@@ -169,6 +227,103 @@ export const MockupGenerator: React.FC<MockupGeneratorProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const renderEditor = (imgKey: string) => {
+    if (!generatedImages[imgKey]) return null;
+
+    return (
+      <div className="mt-4 p-4 bg-stone-50 rounded-2xl border border-stone-200 space-y-4 animate-slide-up relative overflow-hidden">
+        {isEnhancing && (
+            <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center animate-fade-in text-[10px] font-bold text-stone-900">
+                <Sparkles className="animate-pulse text-amber-500 mb-2" size={24} />
+                AI ULEPSZA ZDJĘCIE...
+            </div>
+        )}
+        
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[10px] font-black text-stone-500 uppercase tracking-widest flex items-center gap-2">
+            <Sliders size={12} /> Post-produkcja & AI Edit
+          </p>
+          <div className="flex items-center gap-3">
+              <button 
+                  onClick={() => handleMagicEnhance(imgKey)}
+                  className="flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-[9px] font-black hover:bg-amber-200 transition-all shadow-sm"
+              >
+                  <Sparkles size={10} /> MAGIC ENHANCE
+              </button>
+              <button 
+                onClick={() => { setBrightness(100); setContrast(100); setSaturate(100); setTemp(0); setSharpness(0); }}
+                className="text-[9px] font-bold text-stone-400 hover:text-stone-900 border-l border-stone-200 pl-3"
+              >
+                Reset
+              </button>
+          </div>
+        </div>
+
+        {/* Lightroom Sliders */}
+        <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+          <div className="space-y-1">
+            <div className="flex justify-between text-[9px] font-bold text-stone-500">
+              <span className="flex items-center gap-1"><Sun size={10} /> Jasność</span>
+              <span>{brightness}%</span>
+            </div>
+            <input type="range" min="50" max="150" value={brightness} onChange={(e) => setBrightness(Number(e.target.value))} className="w-full h-1 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-stone-900" />
+          </div>
+          <div className="space-y-1">
+            <div className="flex justify-between text-[9px] font-bold text-stone-500">
+              <span className="flex items-center gap-1"><Contrast size={10} /> Kontrast</span>
+              <span>{contrast}%</span>
+            </div>
+            <input type="range" min="50" max="150" value={contrast} onChange={(e) => setContrast(Number(e.target.value))} className="w-full h-1 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-stone-900" />
+          </div>
+          <div className="space-y-1">
+            <div className="flex justify-between text-[9px] font-bold text-stone-500">
+              <span className="flex items-center gap-1"><Palette size={10} /> Nasycenie</span>
+              <span>{saturate}%</span>
+            </div>
+            <input type="range" min="0" max="200" value={saturate} onChange={(e) => setSaturate(Number(e.target.value))} className="w-full h-1 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-stone-900" />
+          </div>
+          <div className="space-y-1">
+            <div className="flex justify-between text-[9px] font-bold text-stone-500">
+              <span className="flex items-center gap-1"><Thermometer size={10} /> Balans bieli</span>
+              <span>{temp}°</span>
+            </div>
+            <input type="range" min="-30" max="30" value={temp} onChange={(e) => setTemp(Number(e.target.value))} className="w-full h-1 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-stone-900" />
+          </div>
+          <div className="space-y-1 col-span-2 pt-1">
+            <div className="flex justify-between text-[9px] font-bold text-stone-500">
+              <span className="flex items-center gap-1"><Search size={10} /> Wyostrzenie (Sharpness)</span>
+              <span>{sharpness}%</span>
+            </div>
+            <input type="range" min="0" max="40" value={sharpness} onChange={(e) => setSharpness(Number(e.target.value))} className="w-full h-1 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-stone-900" />
+          </div>
+        </div>
+
+        {/* AI Prompt Edit */}
+        <div className="pt-3 border-t border-stone-200">
+            <div className="relative">
+                <input 
+                    type="text" 
+                    value={aiEditPrompt}
+                    onChange={(e) => setAiEditPrompt(e.target.value)}
+                    placeholder="Wpisz np. 'Zmień na oświetlenie nocne', 'Dodaj kwiaty na komodzie'..."
+                    className="w-full pl-3 pr-10 py-2.5 bg-white border border-stone-200 rounded-xl text-[11px] focus:border-stone-900 outline-none transition-all shadow-inner"
+                />
+                <button 
+                    onClick={() => handleAIEdit(imgKey)}
+                    disabled={isEditingAI || !aiEditPrompt}
+                    className="absolute right-1.5 top-1.5 p-1 bg-stone-900 text-white rounded-lg hover:bg-black transition-all disabled:opacity-30 disabled:scale-95"
+                >
+                    {isEditingAI ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                </button>
+            </div>
+            <p className="text-[8px] text-stone-400 mt-1 italic flex items-center gap-1">
+                <Sparkles size={8} /> AI wygeneruje nową wersję tego zdjęcia zachowując Twój produkt.
+            </p>
+        </div>
+      </div>
+    );
   };
 
   const placementKey = `placement_${selectedPlacement}`;
@@ -376,12 +531,23 @@ export const MockupGenerator: React.FC<MockupGeneratorProps> = ({
 
             {generatedImages[placementKey] && (
               <div className="mt-3">
-                <div className="w-full aspect-video rounded-xl overflow-hidden border border-stone-200 shadow-sm mb-2">
+                <div className="w-full aspect-video rounded-xl overflow-hidden border border-stone-200 shadow-sm mb-2 relative">
                   <img
                     src={generatedImages[placementKey]}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-all duration-300"
+                    style={{ 
+                        filter: `brightness(${brightness + (sharpness/4)}%) 
+                                 contrast(${contrast + sharpness}%) 
+                                 saturate(${saturate}%) 
+                                 hue-rotate(${temp}deg)` 
+                    }}
                     alt="Generated mockup"
                   />
+                  {(brightness !== 100 || contrast !== 100 || saturate !== 100 || temp !== 0) && (
+                    <div className="absolute top-2 left-2 bg-stone-900/80 text-white text-[8px] px-1.5 py-0.5 rounded backdrop-blur-sm flex items-center gap-1">
+                        <Sliders size={8} /> Filters active
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -405,6 +571,7 @@ export const MockupGenerator: React.FC<MockupGeneratorProps> = ({
                     {addedToGallery.has(placementKey) ? 'W galerii' : 'Dodaj do listingu'}
                   </button>
                 </div>
+                {renderEditor(placementKey)}
               </div>
             )}
           </div>
@@ -432,11 +599,17 @@ export const MockupGenerator: React.FC<MockupGeneratorProps> = ({
           </button>
 
           {generatedImages['replacement_mode'] && (
-            <div className="mt-6 animate-fade-in">
+            <div className="mt-6 animate-fade-in text-left">
               <div className="w-full aspect-video rounded-2xl overflow-hidden border-2 border-amber-200 shadow-xl mb-4 group/img relative">
                 <img
                   src={generatedImages['replacement_mode']}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover transition-all duration-300"
+                  style={{ 
+                    filter: `brightness(${brightness + (sharpness/4)}%) 
+                             contrast(${contrast + sharpness}%) 
+                             saturate(${saturate}%) 
+                             hue-rotate(${temp}deg)` 
+                  }}
                   alt="Generated replacement mockup"
                 />
                 <div className="absolute top-3 right-3 bg-green-500 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg flex items-center gap-1">
@@ -465,6 +638,7 @@ export const MockupGenerator: React.FC<MockupGeneratorProps> = ({
                   {addedToGallery.has('replacement_mode') ? 'W galerii' : 'DODAJ DO ETY'}
                 </button>
               </div>
+              {renderEditor('replacement_mode')}
             </div>
           )}
         </div>
@@ -511,12 +685,21 @@ export const MockupGenerator: React.FC<MockupGeneratorProps> = ({
                     )}
                   </div>
                   {generatedImages[key] && (
-                    <div className="mt-2 w-full aspect-video rounded-lg overflow-hidden border border-stone-200 shadow-sm">
-                      <img
-                        src={generatedImages[key]}
-                        className="w-full h-full object-cover"
-                        alt={`Mockup ${i + 1}`}
-                      />
+                    <div className="mt-2 space-y-3">
+                      <div className="w-full aspect-video rounded-lg overflow-hidden border border-stone-200 shadow-sm relative">
+                        <img
+                          src={generatedImages[key]}
+                          className="w-full h-full object-cover transition-all duration-300"
+                          style={{ 
+                            filter: `brightness(${brightness + (sharpness/4)}%) 
+                                     contrast(${contrast + sharpness}%) 
+                                     saturate(${saturate}%) 
+                                     hue-rotate(${temp}deg)` 
+                          }}
+                          alt={`Mockup ${i + 1}`}
+                        />
+                      </div>
+                      {renderEditor(key)}
                     </div>
                   )}
                 </div>

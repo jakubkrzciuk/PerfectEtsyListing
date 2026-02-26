@@ -84,6 +84,7 @@ export interface HistoryItem {
   photoType?: string;
   photoCritique?: string;
   photoSuggestions?: string[];
+  videos?: string[];
   // Pełne dane formularza (wymiary, sklep, materiał, wskazówki)
   formData?: Omit<FormData, 'images'> | null;
 }

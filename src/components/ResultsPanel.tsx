@@ -147,7 +147,10 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
               />
             </div>
             <div className="space-y-6">
-              <VideoGenerator formData={formData} />
+              <VideoGenerator 
+                formData={formData} 
+                onAddVideo={(video) => onAddImage(video)} 
+              />
 
               <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-sm">
                 <h4 className="flex items-center gap-2 font-bold text-stone-700 text-sm mb-4">

@@ -9,11 +9,14 @@ import {
     Upload, Info, Layout, PenTool,
     Wand2, Copy, Check, Trash2, Clock,
     Calendar as CalendarIcon, Edit3, Grid3X3,
-    ArrowRight, Zap
+    ArrowRight, Zap, Users
 } from 'lucide-react';
 import { CanvasEditor } from './CanvasEditor';
 import { SocialCalendar } from './SocialCalendar';
 import { InstagramGridPlanner } from './InstagramGridPlanner';
+import { CollaboratorFolder } from './CollaboratorFolder';
+import { LaunchPlanner } from './LaunchPlanner';
+import { PinterestScheduler } from './PinterestScheduler';
 import { PLATFORM_DIMENSIONS } from '../config/brandKit';
 import { useAI } from '../hooks/useAI';
 import { useSocialDatabase } from '../hooks/useSocialDatabase';
@@ -34,7 +37,7 @@ export const SocialStudioTab: React.FC<SocialStudioTabProps> = ({
     const { generateSocialContent, isLoading: isAiLoading } = useAI();
     const { posts, savePost, removePost } = useSocialDatabase();
 
-    const [subTab, setSubTab] = useState<'editor' | 'planner' | 'calendar'>('editor');
+    const [subTab, setSubTab] = useState<'editor' | 'planner' | 'calendar' | 'collab'>('editor');
     const [uploadedImage, setUploadedImage] = useState<string | null>(null);
     const [productName, setProductName] = useState(currentProductName);
     const [price, setPrice] = useState(currentPrice);
@@ -110,6 +113,12 @@ export const SocialStudioTab: React.FC<SocialStudioTabProps> = ({
                     >
                         <CalendarIcon size={16} /> <span className="hidden sm:inline">Harmonogram</span>
                     </button>
+                    <button
+                        onClick={() => setSubTab('collab')}
+                        className={`flex items-center gap-2 px-8 py-3 rounded-[20px] text-[11px] font-black uppercase tracking-widest transition-all duration-500 ${subTab === 'collab' ? 'bg-white text-stone-900 shadow-xl shadow-stone-200' : 'text-stone-400 hover:text-stone-600'}`}
+                    >
+                        <Users size={16} /> <span className="hidden sm:inline">Partnerzy</span>
+                    </button>
                 </div>
             </div>
 
@@ -127,7 +136,7 @@ export const SocialStudioTab: React.FC<SocialStudioTabProps> = ({
                         <div className="hidden lg:flex items-center gap-4 relative z-10">
                             <div className="text-right">
                                 <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest">Status połączenia</p>
-                                <p className="text-xs font-bold text-green-400">Live @lalestudio</p>
+                                <p className="text-xs font-bold text-green-400">Live @laleteam</p>
                             </div>
                             <div className="w-16 h-16 bg-white/10 rounded-full border border-white/20 flex items-center justify-center">
                                 <Zap className="text-rose-400 animate-pulse" />
@@ -139,9 +148,14 @@ export const SocialStudioTab: React.FC<SocialStudioTabProps> = ({
             )}
 
             {subTab === 'calendar' && (
-                <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    <LaunchPlanner />
                     <SocialCalendar posts={posts} />
                 </div>
+            )}
+
+            {subTab === 'collab' && (
+                <CollaboratorFolder />
             )}
 
             {subTab === 'editor' && (
@@ -252,19 +266,25 @@ export const SocialStudioTab: React.FC<SocialStudioTabProps> = ({
                         </div>
 
                         {/* Right Editor Panel */}
-                        <div className="lg:col-span-8">
+                        <div className="lg:col-span-8 space-y-12">
                             {uploadedImage ? (
-                                <div className="h-[750px] sticky top-8">
-                                    <CanvasEditor
-                                        key={`${selectedPlatform}-${uploadedImage}`}
-                                        initialImage={uploadedImage}
-                                        width={currentDim.width > currentDim.height ? 600 : 400}
-                                        height={currentDim.width > currentDim.height ? (600 / (currentDim.width / currentDim.height)) : 600}
-                                        productName={productName}
-                                        price={price}
-                                        onSave={handleSaveToLibrary}
-                                    />
-                                </div>
+                                <>
+                                    <div className="h-[750px] sticky top-8">
+                                        <CanvasEditor
+                                            key={`${selectedPlatform}-${uploadedImage}`}
+                                            initialImage={uploadedImage}
+                                            width={currentDim.width > currentDim.height ? 600 : 400}
+                                            height={currentDim.width > currentDim.height ? (600 / (currentDim.width / currentDim.height)) : 600}
+                                            productName={productName}
+                                            price={price}
+                                            onSave={handleSaveToLibrary}
+                                        />
+                                    </div>
+
+                                    {selectedPlatform === 'PINTEREST' && (
+                                        <PinterestScheduler sourceImage={uploadedImage} />
+                                    )}
+                                </>
                             ) : (
                                 <div className="h-full min-h-[600px] border-4 border-dashed border-stone-200/60 rounded-[40px] bg-white flex flex-col items-center justify-center text-center p-12 shadow-sm">
                                     <div className="w-24 h-24 bg-stone-50 rounded-[32px] shadow-sm flex items-center justify-center mb-6">

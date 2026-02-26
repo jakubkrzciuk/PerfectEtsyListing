@@ -1,6 +1,6 @@
 // ============================================
 // USE INSPIRATIONS HOOK
-// Przechowuje ulubione wnętrza użytkownika w Supabase Storage
+// Przechowuje ulubione wnętrza użytkownika w Supabase Database & Storage
 // ============================================
 
 import { useState, useEffect, useCallback } from 'react';
@@ -11,30 +11,50 @@ export interface InspirationItem {
     url: string;       // publiczny URL z Supabase Storage
     name: string;      // opis (np. "Skandynawski salon")
     style: string;     // styl AI (przesyłany do prompta)
-    type: 'with_product' | 'empty'; // Nowe: czy na zdjęciu jest już gobelin
-    originalDimensions?: string;   // Nowe: co już tam jest (np. "80x100")
+    type: 'with_product' | 'empty';
+    originalDimensions?: string;
     addedAt: string;
 }
 
 const BUCKET = 'listing-images';
-const STORAGE_KEY = 'lale_inspirations'; // localStorage fallback
 
 export const useInspirations = (userId: string | undefined) => {
     const [items, setItems] = useState<InspirationItem[]>([]);
     const [loading, setLoading] = useState(false);
 
-    // Wczytaj z localStorage (szybkie, nie wymaga bazy)
-    useEffect(() => {
-        const saved = localStorage.getItem(`${STORAGE_KEY}_${userId}`);
-        if (saved) {
-            try { setItems(JSON.parse(saved)); } catch { }
+    // Wczytaj z bazy danych Supabase (Trwałe)
+    const fetchInspirations = useCallback(async () => {
+        if (!userId) return;
+        setLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('inspirations')
+                .select('*')
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            const mapped: InspirationItem[] = (data || []).map((row: any) => ({
+                id: row.id,
+                url: row.url,
+                name: row.name,
+                style: row.style,
+                type: row.type as 'with_product' | 'empty',
+                originalDimensions: row.original_dimensions,
+                addedAt: new Date(row.created_at).toLocaleDateString('pl-PL'),
+            }));
+            setItems(mapped);
+        } catch (err) {
+            console.error('Error fetching inspirations:', err);
+        } finally {
+            setLoading(false);
         }
     }, [userId]);
 
-    const save = (updated: InspirationItem[]) => {
-        setItems(updated);
-        localStorage.setItem(`${STORAGE_KEY}_${userId}`, JSON.stringify(updated));
-    };
+    useEffect(() => {
+        fetchInspirations();
+    }, [fetchInspirations]);
 
     // Dodaj nową inspirację
     const addInspiration = useCallback(async (
@@ -61,47 +81,58 @@ export const useInspirations = (userId: string | undefined) => {
             }
             const blob = new Blob([ab], { type: 'image/jpeg' });
 
-            // Upload do Supabase Storage
-            const { error } = await supabase.storage
+            // 1. Upload do Supabase Storage
+            const { error: storageError } = await supabase.storage
                 .from(BUCKET)
                 .upload(path, blob, { contentType: 'image/jpeg', upsert: true });
 
-            if (error) throw error;
+            if (storageError) throw storageError;
 
-            const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+            const { data: storageData } = supabase.storage.from(BUCKET).getPublicUrl(path);
 
-            const newItem: InspirationItem = {
+            // 2. Zapisz w Supabase Database (Trwałe)
+            const { error: dbError } = await supabase.from('inspirations').insert({
                 id,
-                url: data.publicUrl,
+                user_id: userId,
+                url: storageData.publicUrl,
                 name,
                 style,
                 type,
-                originalDimensions,
-                addedAt: new Date().toLocaleDateString('pl-PL'),
-            };
+                original_dimensions: originalDimensions
+            });
 
-            save([newItem, ...items]);
+            if (dbError) throw dbError;
+
+            fetchInspirations();
         } catch (err) {
-            console.error('Inspiration upload error:', err);
+            console.error('Inspiration save error:', err);
             throw err;
         } finally {
             setLoading(false);
         }
-    }, [userId, items]);
+    }, [userId, fetchInspirations]);
 
     // Usuń inspirację
     const removeInspiration = useCallback(async (id: string) => {
         if (!userId) return;
 
         try {
-            // Usuń z Storage
+            // 1. Usuń z Storage
             await supabase.storage.from(BUCKET).remove([
                 `${userId}/inspirations/${id}.jpg`
             ]);
-        } catch { }
 
-        save(items.filter(i => i.id !== id));
-    }, [userId, items]);
+            // 2. Usuń z Database
+            await supabase.from('inspirations')
+                .delete()
+                .eq('id', id)
+                .eq('user_id', userId);
+
+            fetchInspirations();
+        } catch (err) {
+            console.error('Error removing inspiration:', err);
+        }
+    }, [userId, fetchInspirations]);
 
     return { items, loading, addInspiration, removeInspiration };
 };

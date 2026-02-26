@@ -11,33 +11,46 @@ import type { HistoryItem } from '../types';
 const BUCKET = 'listing-images';
 
 // ============================================
-// Upload base64 image → Supabase Storage → URL
+// Upload File → Supabase Storage → URL
+// Obsługuje base64 oraz blob: URLs (filmy)
 // ============================================
-async function uploadImageToStorage(
-    base64: string,
+async function uploadFileToStorage(
+    source: string,
     listingId: string,
     index: number,
     userId: string
 ): Promise<string> {
-    // Sprawdź czy to URL (już wgrany) czy base64
-    if (base64.startsWith('http')) return base64;
+    // Sprawdź czy to już wgrany URL publiczny
+    if (source.startsWith('http') && !source.startsWith('blob:')) return source;
 
-    // Wyciągnij typ pliku z base64
-    const mimeMatch = base64.match(/data:([^;]+);base64,/);
-    const mime = mimeMatch?.[1] || 'image/jpeg';
-    const ext = mime.split('/')[1] || 'jpg';
+    let blob: Blob;
+    let mime: string;
+    let ext: string;
 
-    // Zamień base64 na binarny Blob
-    const byteString = atob(base64.split(',')[1]);
-    const ab = new ArrayBuffer(byteString.length);
-    const ia = new Uint8Array(ab);
-    for (let i = 0; i < byteString.length; i++) {
-        ia[i] = byteString.charCodeAt(i);
+    if (source.startsWith('blob:')) {
+        // Obsługa filmów wyrenderowanych lokalnie (blob)
+        const response = await fetch(source);
+        blob = await response.blob();
+        mime = blob.type;
+        ext = mime.split('/')[1] || (mime.includes('video') ? 'webm' : 'jpg');
+    } else {
+        // Obsługa zdjęć base64
+        const mimeMatch = source.match(/data:([^;]+);base64,/);
+        mime = mimeMatch?.[1] || 'image/jpeg';
+        ext = mime.split('/')[1] || 'jpg';
+
+        const byteString = atob(source.split(',')[1]);
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
+        }
+        blob = new Blob([ab], { type: mime });
     }
-    const blob = new Blob([ab], { type: mime });
 
-    // Ścieżka w buckecie: userId/listingId/0.jpg
-    const path = `${userId}/${listingId}/${index}.${ext}`;
+    // Ścieżka w buckecie
+    const fileName = mime.includes('video') ? `video_${index}.${ext}` : `${index}.${ext}`;
+    const path = `${userId}/${listingId}/${fileName}`;
 
     const { error } = await supabase.storage
         .from(BUCKET)
@@ -48,7 +61,6 @@ async function uploadImageToStorage(
 
     if (error) throw new Error(`Storage upload error: ${error.message}`);
 
-    // Pobierz publiczny URL
     const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
     return data.publicUrl;
 }
@@ -114,6 +126,7 @@ export const useDatabase = (userId: string | undefined) => {
                 photoSuggestions: row.photo_suggestions || [],
                 formData: row.form_data || null,
                 altText: row.alt_text || '',
+                videos: row.videos || [],
             }));
 
             setItems(mapped);
@@ -130,36 +143,60 @@ export const useDatabase = (userId: string | undefined) => {
     }, [fetchItems]);
 
     // ============================================
-    // Dodaj listing + uploaduj zdjęcia do Storage
+    // Dodaj listing (lub aktualizuj jeśli nazwa ta sama)
     // ============================================
     const addItem = useCallback(async (item: HistoryItem) => {
         if (!userId) return;
 
-        // 1. Uploaduj wszystkie zdjęcia do Supabase Storage
+        // 1. Sprawdź czy mamy już gobelin o tej samej nazwie
+        const { data: existing } = await supabase
+            .from('listings')
+            .select('id, thumbnails')
+            .eq('user_id', userId)
+            .eq('name', item.name)
+            .single();
+
+        const targetId = existing?.id || item.id;
+        const previousPhotos = existing?.thumbnails || [];
+
+        // 2. Uploaduj tylko NOWE zdjęcia i filmy do Supabase Storage
         let thumbnailUrls: string[] = [];
-        if (item.thumbnails && item.thumbnails.length > 0) {
-            try {
-                thumbnailUrls = await Promise.all(
-                    item.thumbnails.map((img, i) =>
-                        uploadImageToStorage(img, item.id, i, userId)
-                    )
-                );
-            } catch (err) {
-                console.error('Image upload error:', err);
-                // Fallback: zapisz bez zdjęć jeśli upload zawiedzie
-                thumbnailUrls = [];
-            }
+        let videoUrls: string[] = [];
+
+        try {
+            // Rozdzielamy na zdjęcia i wideo (wideo to zazwyczaj blob: lub link .webm)
+            const photoSources = item.thumbnails.filter(t => !t.startsWith('blob:') && !t.includes('video'));
+            const videoSources = item.thumbnails.filter(t => t.startsWith('blob:') || t.includes('video'));
+
+            thumbnailUrls = await Promise.all(
+                photoSources.map((img, i) =>
+                    uploadFileToStorage(img, targetId, i + previousPhotos.length, userId)
+                )
+            );
+            
+            videoUrls = await Promise.all(
+                videoSources.map((vid, i) =>
+                    uploadFileToStorage(vid, targetId, i, userId)
+                )
+            );
+
+            // Łączymy stare URL-e z nowymi
+            thumbnailUrls = [...previousPhotos, ...thumbnailUrls.filter(url => !previousPhotos.includes(url))];
+        } catch (err) {
+            console.error('Upload error:', err);
+            thumbnailUrls = item.thumbnails.filter(t => t.startsWith('http') && !t.startsWith('blob:'));
         }
 
-        // 2. Zapisz listing z URL-ami (nie base64)
-        const { error } = await supabase.from('listings').insert({
-            id: item.id,
+        // 3. Zapisz/Aktualizuj (UPSERT)
+        const { error } = await supabase.from('listings').upsert({
+            id: targetId,
             user_id: userId,
             name: item.name,
             title: item.title,
             tags: item.tags,
             colors: item.colors,
             thumbnails: thumbnailUrls,
+            videos: videoUrls,
             alt_text: item.altText || '',
             platforms: item.platforms,
             description: item.description,
@@ -172,16 +209,17 @@ export const useDatabase = (userId: string | undefined) => {
             photo_critique: item.photoCritique,
             photo_suggestions: item.photoSuggestions,
             form_data: item.formData || null,
-        });
+            created_at: existing ? undefined : new Date().toISOString()
+        }, { onConflict: 'id' });
 
         if (error) {
-            console.error('DB insert error:', error);
+            console.error('DB save error:', error);
             throw error;
         }
 
-        // 3. Zaktualizuj stan lokalny z URL-ami
-        setItems(prev => [{ ...item, thumbnails: thumbnailUrls }, ...prev]);
-    }, [userId]);
+        // 4. Odśwież listę lokalną
+        fetchItems();
+    }, [userId, fetchItems]);
 
     // Usuń listing + zdjęcia z Storage
     const removeItem = useCallback(async (id: string) => {
