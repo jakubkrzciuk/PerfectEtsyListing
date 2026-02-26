@@ -31,6 +31,44 @@ export const useAI = (options: UseAIOptions = {}) => {
   }, []);
 
   // ============================================
+  // POBIERANIE SUGESTII WIZUALNYCH (Szybka analiza)
+  // ============================================
+  const getPhotoSuggestions = useCallback(async (
+    image: ProcessedImage
+  ): Promise<string[]> => {
+    try {
+      const ai = getAI();
+      const systemPrompt = `You are a Visual Creative Director for LALE STUDIO. 
+      Analyze the product image and suggest 3 unique, high-end interior photography settings (prompts) for mockups.
+      Focus on variety: 1. Boho/Warm, 2. Japandi/Minimalist, 3. Modern/Luxury.
+      Return ONLY a JSON array of strings: ["suggestion 1", "suggestion 2", "suggestion 3"]`;
+
+      const result: any = await ai.models.generateContent({
+        model: AI_MODELS.TEXT,
+        contents: [{ 
+          role: 'user', 
+          parts: [
+            { inlineData: { mimeType: image.mimeType, data: image.data } },
+            { text: "Suggest 3 mockup prompt ideas for this product." }
+          ] 
+        }],
+        config: { systemInstruction: systemPrompt }
+      });
+
+      let jsonText = result.text ?? '[]';
+      jsonText = jsonText.replace(/```json/g, '').replace(/```/g, '').trim();
+      return JSON.parse(jsonText);
+    } catch (err) {
+      console.error('Photo suggestions failed:', err);
+      return [
+        "Minimalist Japandi living room with natural oak furniture",
+        "Cozy Boho bedroom with warm sunlight and plants",
+        "Modern luxury office with large window and concrete walls"
+      ];
+    }
+  }, [getAI]);
+
+  // ============================================
   // GENEROWANIE LISTINGU SEO
   // ============================================
   const generateListing = useCallback(async (

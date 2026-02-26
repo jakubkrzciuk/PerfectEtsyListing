@@ -99,6 +99,7 @@ export const MockupGenerator: React.FC<MockupGeneratorProps> = ({
   const [saturate, setSaturate] = useState(100);
   const [temp, setTemp] = useState(0); // Hue-rotate / Color balance surrogate
   const [sharpness, setSharpness] = useState(0); // CSS surrogate for contrast/brightness trick
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isEditingAI, setIsEditingAI] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [aiEditPrompt, setAiEditPrompt] = useState('');
@@ -440,51 +441,51 @@ export const MockupGenerator: React.FC<MockupGeneratorProps> = ({
         <p className="text-[9px] text-stone-400 mt-2">Im dokładniejsza nazwa, tym lepiej AI 'zrozumie' zdjęcie gobelinu.</p>
       </div>
 
-      {/* ===== RATIO, SIZE & PLACEMENT (Visible only in non-replacement mode) ===== */}
+      {/* ===== RATIO & SIZE PICKER - Always visible to define product shape ===== */}
+      <div className="grid grid-cols-2 gap-4">
+        {/* Proporcje */}
+        <div className="bg-stone-50 rounded-2xl border border-stone-200 p-6">
+          <p className="text-[10px] font-black text-stone-500 uppercase tracking-widest mb-4">📐 Kształt Produktu</p>
+          <div className="flex gap-2">
+            {RATIOS.map(r => (
+              <button
+                key={r.id}
+                onClick={() => setSelectedRatio(r.id)}
+                className={`flex-1 flex flex-col items-center py-3 rounded-xl border-2 transition-all ${selectedRatio === r.id
+                  ? 'border-amber-500 bg-white text-stone-900 shadow-sm'
+                  : 'border-stone-100 bg-white/50 text-stone-400 hover:border-amber-200'
+                  }`}
+              >
+                <span className="text-sm font-bold">{r.icon}</span>
+                <span className="text-[9px] uppercase font-black">{r.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Rozmiar */}
+        <div className="bg-stone-50 rounded-2xl border border-stone-200 p-6">
+          <p className="text-[10px] font-black text-stone-500 uppercase tracking-widest mb-4">📏 Skala (Wizualna)</p>
+          <div className="flex gap-1.5 transition-all">
+            {SIZES.map(s => (
+              <button
+                key={s.id}
+                onClick={() => setSelectedSize(s.id)}
+                className={`flex-1 py-3 rounded-xl border-2 font-black text-[10px] transition-all ${selectedSize === s.id
+                  ? 'border-amber-500 bg-white text-stone-900 shadow-sm'
+                  : 'border-stone-100 bg-white/50 text-stone-400 hover:border-amber-200'
+                  }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ===== PLACEMENT OR REPLACEMENT BUTTONS ===== */}
       {!isReplacementMode ? (
         <>
-          {/* ===== RATIO & SIZE PICKER ===== */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Proporcje */}
-            <div className="bg-stone-50 rounded-2xl border border-stone-200 p-6">
-              <p className="text-[10px] font-black text-stone-500 uppercase tracking-widest mb-4">📐 Kształt</p>
-              <div className="flex gap-2">
-                {RATIOS.map(r => (
-                  <button
-                    key={r.id}
-                    onClick={() => setSelectedRatio(r.id)}
-                    className={`flex-1 flex flex-col items-center py-3 rounded-xl border-2 transition-all ${selectedRatio === r.id
-                      ? 'border-amber-500 bg-white text-stone-900 shadow-sm'
-                      : 'border-stone-100 bg-white/50 text-stone-400 hover:border-amber-200'
-                      }`}
-                  >
-                    <span className="text-sm font-bold">{r.icon}</span>
-                    <span className="text-[9px] uppercase font-black">{r.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Rozmiar */}
-            <div className="bg-stone-50 rounded-2xl border border-stone-200 p-6">
-              <p className="text-[10px] font-black text-stone-500 uppercase tracking-widest mb-4">📏 Skala</p>
-              <div className="flex gap-1.5 transition-all">
-                {SIZES.map(s => (
-                  <button
-                    key={s.id}
-                    onClick={() => setSelectedSize(s.id)}
-                    className={`flex-1 py-3 rounded-xl border-2 font-black text-[10px] transition-all ${selectedSize === s.id
-                      ? 'border-amber-500 bg-white text-stone-900 shadow-sm'
-                      : 'border-stone-100 bg-white/50 text-stone-400 hover:border-amber-200'
-                      }`}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
           {/* ===== PLACEMENT PICKER ===== */}
           <div className="bg-stone-50 rounded-2xl border border-stone-200 p-6">
             <p className="text-[10px] font-black text-stone-500 uppercase tracking-widest mb-4 flex items-center gap-2">
@@ -536,10 +537,13 @@ export const MockupGenerator: React.FC<MockupGeneratorProps> = ({
 
             {generatedImages[placementKey] && (
               <div className="mt-3">
-                <div className="w-full aspect-video rounded-xl overflow-hidden border border-stone-200 shadow-sm mb-2 relative">
+                <div 
+                  className="w-full aspect-video rounded-xl overflow-hidden border border-stone-200 shadow-sm mb-2 relative group-hover/img:shadow-md transition-shadow cursor-zoom-in"
+                  onClick={() => setPreviewImage(generatedImages[placementKey])}
+                >
                   <img
                     src={generatedImages[placementKey]}
-                    className="w-full h-full object-cover transition-all duration-300"
+                    className="w-full h-full object-cover transition-all duration-300 group-hover:scale-[1.02]"
                     style={{ 
                         filter: `brightness(${brightness + (sharpness/4)}%) 
                                  contrast(${contrast + sharpness}%) 
@@ -548,6 +552,9 @@ export const MockupGenerator: React.FC<MockupGeneratorProps> = ({
                     }}
                     alt="Generated mockup"
                   />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center">
+                    <Search className="text-white opacity-0 group-hover:opacity-100 transition-opacity" size={24} />
+                  </div>
                   {(brightness !== 100 || contrast !== 100 || saturate !== 100 || temp !== 0) && (
                     <div className="absolute top-2 left-2 bg-stone-900/80 text-white text-[8px] px-1.5 py-0.5 rounded backdrop-blur-sm flex items-center gap-1">
                         <Sliders size={8} /> Filters active
@@ -605,10 +612,13 @@ export const MockupGenerator: React.FC<MockupGeneratorProps> = ({
 
           {generatedImages['replacement_mode'] && (
             <div className="mt-6 animate-fade-in text-left">
-              <div className="w-full aspect-video rounded-2xl overflow-hidden border-2 border-amber-200 shadow-xl mb-4 group/img relative">
+              <div 
+                className="w-full aspect-video rounded-2xl overflow-hidden border-2 border-amber-200 shadow-xl mb-4 group/img relative cursor-zoom-in"
+                onClick={() => setPreviewImage(generatedImages['replacement_mode'])}
+              >
                 <img
                   src={generatedImages['replacement_mode']}
-                  className="w-full h-full object-cover transition-all duration-300"
+                  className="w-full h-full object-cover transition-all duration-300 group-hover:scale-[1.02]"
                   style={{ 
                     filter: `brightness(${brightness + (sharpness/4)}%) 
                              contrast(${contrast + sharpness}%) 
@@ -617,6 +627,9 @@ export const MockupGenerator: React.FC<MockupGeneratorProps> = ({
                   }}
                   alt="Generated replacement mockup"
                 />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center">
+                  <Search className="text-white opacity-0 group-hover:opacity-100 transition-opacity" size={32} />
+                </div>
                 <div className="absolute top-3 right-3 bg-green-500 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg flex items-center gap-1">
                   <CheckCircle2 size={12} /> GOTOWE
                 </div>
@@ -649,64 +662,87 @@ export const MockupGenerator: React.FC<MockupGeneratorProps> = ({
         </div>
       )}
 
-      {/* ===== AI SUGGESTIONS ===== */}
+      {/* ===== AI SUGGESTIONS - PROMPT IDEAS ===== */}
       {photoSuggestions.length > 0 && (
-        <div className="space-y-4">
-          <p className="text-[10px] font-black text-stone-500 uppercase tracking-widest flex items-center gap-2">
-            <Sparkles size={12} className="text-amber-500" /> Sugestie Eksperta AI:
-          </p>
-          <div className="space-y-3">
+        <div className="pt-8 border-t border-stone-100 space-y-6">
+          <div className="flex items-end justify-between">
+            <div className="space-y-1">
+              <p className="text-[10px] font-black text-amber-600 uppercase tracking-[0.2em]">04. Studio Inspiracji</p>
+              <h4 className="text-lg font-bold text-stone-900 font-serif flex items-center gap-2">
+                <Sparkles size={20} className="text-amber-500" /> Pomysły Eksperta na Twoje Zdjęcia
+              </h4>
+            </div>
+            <div className="bg-amber-100 text-amber-700 text-[10px] px-3 py-1 rounded-full font-black animate-pulse">
+              TRENDING 2026
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {photoSuggestions.map((suggestion, i) => {
               const key = `suggestion_${i}`;
               return (
-                <div key={i} className="bg-stone-50 p-4 rounded-2xl border border-stone-200 group/sug transition-all hover:bg-white hover:shadow-md">
-                  <div className="flex items-start gap-3 text-[10px] text-stone-600 mb-4 font-medium leading-relaxed italic">
-                    <Sparkles size={14} className="text-amber-500 mt-0.5 flex-shrink-0 opacity-50 group-hover/sug:opacity-100" />
-                    <span>{suggestion}</span>
+                <div key={i} className="premium-card p-6 bg-white border-stone-200/60 group/sug transition-all hover:bg-stone-50 hover:shadow-xl hover:scale-[1.01] relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-3 opacity-10 group-hover/sug:opacity-100 group-hover/sug:rotate-12 transition-all">
+                    <Wand2 size={40} className="text-amber-500" />
                   </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => handleGenerate(
-                        `${suggestion}${selectedInspiration ? `. Interior style: ${selectedInspiration.style}` : ''}`,
-                        key,
-                        true // Force new scene for suggestions to avoid conflicts with selected inspiration
-                      )}
-                      disabled={generatingFor === key}
-                      className="text-[10px] bg-stone-900 hover:bg-black text-white px-4 py-2 rounded-xl flex items-center gap-2 transition-all font-black uppercase tracking-wider shadow-sm disabled:bg-stone-200 disabled:text-stone-400"
-                    >
-                      {generatingFor === key ? (
-                        <><Loader2 className="animate-spin" size={12} /> TRWA GENEROWANIE...</>
-                      ) : (
-                        <><Wand2 size={12} className="text-amber-500" /> Generuj to ujęcie</>
-                      )}
-                    </button>
-                    {generatedImages[key] && (
+                  
+                  <div className="relative z-10 space-y-4">
+                    <p className="text-sm text-stone-700 font-medium leading-relaxed italic pr-8">
+                       "{suggestion}"
+                    </p>
+                    
+                    <div className="flex flex-wrap gap-3">
                       <button
-                        onClick={() => downloadImage(generatedImages[key], `mockup-suggestion-${i}.png`)}
-                        className="text-[10px] text-green-600 hover:text-green-800 flex items-center gap-1 font-bold"
+                        onClick={() => handleGenerate(
+                          `${suggestion}${selectedInspiration ? `. Interior style: ${selectedInspiration.style}` : ''}`,
+                          key,
+                          true 
+                        )}
+                        disabled={generatingFor === key}
+                        className="bg-stone-900 border border-stone-800 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-black transition-all shadow-lg active:scale-95 disabled:bg-stone-200 disabled:text-stone-400"
                       >
-                        <Download size={10} /> Pobierz
+                        {generatingFor === key ? (
+                          <><Loader2 className="animate-spin" size={12} /> Praca trwa...</>
+                        ) : (
+                          <><Wand2 size={12} className="text-amber-500" /> Generuj to ujęcie</>
+                        )}
                       </button>
+
+                      {generatedImages[key] && (
+                        <button
+                          onClick={() => downloadImage(generatedImages[key], `mockup-suggestion-${i}.png`)}
+                          className="bg-white border border-stone-200 text-stone-600 px-4 py-2.5 rounded-xl text-[10px] font-bold flex items-center gap-2 hover:bg-stone-50 transition-all"
+                        >
+                          <Download size={12} /> Pobierz 4K
+                        </button>
+                      )}
+                    </div>
+
+                    {generatedImages[key] && (
+                      <div className="animate-fade-in pt-2">
+                        <div 
+                          className="w-full aspect-video rounded-xl overflow-hidden border border-stone-200 shadow-sm relative cursor-zoom-in group/suggest-img"
+                          onClick={() => setPreviewImage(generatedImages[key])}
+                        >
+                          <img
+                            src={generatedImages[key]}
+                            className="w-full h-full object-cover transition-all duration-300 group-hover:scale-110"
+                            style={{ 
+                              filter: `brightness(${brightness + (sharpness/4)}%) 
+                                       contrast(${contrast + sharpness}%) 
+                                       saturate(${saturate}%) 
+                                       hue-rotate(${temp}deg)` 
+                            }}
+                            alt={`Mockup ${i + 1}`}
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                            <Search className="text-white opacity-0 group-hover:opacity-100 transition-opacity" size={24} />
+                          </div>
+                        </div>
+                        {renderEditor(key)}
+                      </div>
                     )}
                   </div>
-                  {generatedImages[key] && (
-                    <div className="mt-2 space-y-3">
-                      <div className="w-full aspect-video rounded-lg overflow-hidden border border-stone-200 shadow-sm relative">
-                        <img
-                          src={generatedImages[key]}
-                          className="w-full h-full object-cover transition-all duration-300"
-                          style={{ 
-                            filter: `brightness(${brightness + (sharpness/4)}%) 
-                                     contrast(${contrast + sharpness}%) 
-                                     saturate(${saturate}%) 
-                                     hue-rotate(${temp}deg)` 
-                          }}
-                          alt={`Mockup ${i + 1}`}
-                        />
-                      </div>
-                      {renderEditor(key)}
-                    </div>
-                  )}
                 </div>
               );
             })}
@@ -722,5 +758,54 @@ export const MockupGenerator: React.FC<MockupGeneratorProps> = ({
         <p>• Każda sugestia AI generuje inne, unikalne ujęcie</p>
       </div>
     </div>
+
+    {/* ===== LIGHTBOX MODAL ===== */}
+    {previewImage && (
+      <div 
+        className="fixed inset-0 z-[100] bg-stone-950/95 backdrop-blur-xl flex flex-col animate-fade-in"
+        onClick={() => setPreviewImage(null)}
+      >
+        <button 
+          className="absolute top-8 right-8 text-white/50 hover:text-white transition-colors z-10"
+          onClick={() => setPreviewImage(null)}
+        >
+          <X size={32} />
+        </button>
+
+        <div className="flex-1 flex items-center justify-center p-4 sm:p-20 overflow-hidden">
+          <img 
+            src={previewImage} 
+            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl animate-zoom-in"
+            style={{ 
+                filter: `brightness(${brightness + (sharpness/4)}%) 
+                         contrast(${contrast + sharpness}%) 
+                         saturate(${saturate}%) 
+                         hue-rotate(${temp}deg)` 
+            }}
+            alt="Preview mockup"
+          />
+        </div>
+
+        <div 
+          className="bg-black/40 backdrop-blur-md border-t border-white/10 p-6 flex items-center justify-between"
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="flex items-center gap-4">
+            <div className="text-white">
+              <p className="text-xs font-black uppercase tracking-widest text-white/40 mb-1">Preview 4K Ultra-HD</p>
+              <h4 className="text-sm font-bold">{formData.name || 'Mockup Lale Studio'}</h4>
+            </div>
+          </div>
+          <div className="flex gap-4">
+              <button 
+                onClick={() => downloadImage(previewImage, 'mockup-preview.png')}
+                className="bg-white text-stone-900 px-6 py-3 rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-amber-400 transition-all"
+              >
+                <Download size={16} /> Pobierz oryginał
+              </button>
+          </div>
+        </div>
+      </div>
+    )}
   );
 };

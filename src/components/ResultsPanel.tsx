@@ -35,6 +35,8 @@ interface ResultsPanelProps {
   onSelectInspiration?: (item: InspirationItem | null) => void;
   onAddImage: (img: string) => void;
   isSaving: boolean;
+  generationMode: GenerationMode;
+  referenceBg: string | null;
 }
 
 export const ResultsPanel: React.FC<ResultsPanelProps> = ({
@@ -50,6 +52,8 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
   onSelectInspiration,
   onAddImage,
   isSaving,
+  generationMode,
+  referenceBg,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'visuals' | 'social' | 'listing' | 'analyze' | 'market'>('visuals');
   const [isReanalyzing, setIsReanalyzing] = useState(false);
@@ -136,8 +140,8 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
             <div className="space-y-6">
               <MockupGenerator
                 formData={formData}
-                generationMode="replace"
-                referenceBg={null}
+                generationMode={generationMode}
+                referenceBg={referenceBg}
                 photoScore={result.photoScore}
                 photoSuggestions={result.photoSuggestions}
                 selectedInspiration={selectedInspiration}

@@ -4,7 +4,7 @@
 // ============================================
 
 import React, { useRef, useState } from 'react';
-import { Image as ImageIcon, X, PlusCircle, Link as LinkIcon, Loader2 } from 'lucide-react';
+import { Image as ImageIcon, X, PlusCircle, Link as LinkIcon, Loader2, Search } from 'lucide-react';
 import { validateImageFile } from '../utils/imageProcessing';
 import { IMAGE_CONFIG } from '../config/constants';
 
@@ -25,6 +25,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   const [urlInput, setUrlInput] = useState('');
   const [urlLoading, setUrlLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -157,9 +158,13 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           {images.map((img, idx) => (
             <div
               key={idx}
-              className="relative aspect-square rounded overflow-hidden border border-stone-200 group"
+              className="relative aspect-square rounded overflow-hidden border border-stone-200 group cursor-zoom-in"
+              onClick={() => setPreviewImage(img)}
             >
-              <img src={img} className="w-full h-full object-cover" alt={`Product ${idx + 1}`} />
+              <img src={img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={`Product ${idx + 1}`} />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                <Search className="text-white opacity-0 group-hover:opacity-100 transition-opacity" size={16} />
+              </div>
               <button
                 onClick={() => removeImage(idx)}
                 className="absolute top-0.5 right-0.5 bg-black/50 text-white rounded-full p-1 
@@ -249,6 +254,27 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         accept="image/*"
         multiple
       />
+    {/* ===== LIGHTBOX MODAL ===== */}
+    {previewImage && (
+      <div 
+        className="fixed inset-0 z-[200] bg-stone-950/95 backdrop-blur-xl flex flex-col animate-fade-in"
+        onClick={() => setPreviewImage(null)}
+      >
+        <button 
+          className="absolute top-8 right-8 text-white/50 hover:text-white transition-colors z-10"
+          onClick={() => setPreviewImage(null)}
+        >
+          <X size={32} />
+        </button>
+        <div className="flex-1 flex items-center justify-center p-4 sm:p-20 overflow-hidden">
+          <img 
+            src={previewImage} 
+            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl animate-zoom-in"
+            alt="Preview"
+          />
+        </div>
+      </div>
+    )}
     </div>
   );
 };

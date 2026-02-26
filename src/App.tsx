@@ -78,8 +78,31 @@ const App: React.FC = () => {
   const { items: inspirations, loading: inspirationsLoading, addInspiration, removeInspiration } = useInspirations(user?.id);
   const [selectedInspiration, setSelectedInspiration] = useState<InspirationItem | null>(null);
 
-  const { generateListing, isLoading: isGenerating, error: aiError, clearError } = useAI();
+  const { generateListing, getPhotoSuggestions, isLoading: isGenerating, error: aiError, clearError } = useAI();
   const [isSaving, setIsSaving] = useState(false);
+  const [quickSuggestions, setQuickSuggestions] = useState<string[]>([]);
+  const [isQuickAnalyzing, setIsQuickAnalyzing] = useState(false);
+
+  // Quick visual analysis on first image upload
+  useEffect(() => {
+    const triggerQuickAnalysis = async () => {
+      if (formData.images.length === 1 && quickSuggestions.length === 0 && !isQuickAnalyzing) {
+        setIsQuickAnalyzing(true);
+        try {
+          const processed = await processImagesForAI([formData.images[0]]);
+          const suggestions = await getPhotoSuggestions(processed[0]);
+          setQuickSuggestions(suggestions);
+        } catch (err) {
+          console.error('Quick analysis failed', err);
+        } finally {
+          setIsQuickAnalyzing(false);
+        }
+      } else if (formData.images.length === 0) {
+        setQuickSuggestions([]);
+      }
+    };
+    triggerQuickAnalysis();
+  }, [formData.images, getPhotoSuggestions, quickSuggestions.length, isQuickAnalyzing]);
 
   if (authLoading) return null;
   if (!user) return <LoginPage onSignIn={signIn} onSignUp={signUp} />;
@@ -313,16 +336,53 @@ const App: React.FC = () => {
                         result={result}
                         onResultChange={setResult}
                         formData={formData}
+                        generationMode={generationMode}
+                        referenceBg={referenceBg}
                         seoAnalysis={seoAnalysis}
                         powerKeywords={powerKeywords}
                         onSave={handleSave}
                         isSaving={isSaving}
                         onAddImage={(img) => setFormData(prev => ({ ...prev, images: [...prev.images, img] }))}
-                        onNew={() => { setResult(null); setFormData(initialFormData); setSelectedInspiration(null); }}
+                        onNew={() => { setResult(null); setFormData(initialFormData); setSelectedInspiration(null); setQuickSuggestions([]); }}
                         selectedInspiration={selectedInspiration}
                         inspirations={inspirations}
                         onSelectInspiration={setSelectedInspiration}
                       />
+                    </div>
+                  ) : formData.images.length > 0 ? (
+                    <div className="space-y-8 animate-fade-in">
+                      <div className="bg-white rounded-[40px] p-10 border border-stone-200 shadow-xl">
+                        <div className="flex items-center justify-between mb-8">
+                          <div>
+                            <h3 className="text-2xl font-bold text-stone-900 font-serif">Studio Wizualne</h3>
+                            <p className="text-stone-500 text-sm">Wygeneruj mockupy 4K dla swojego gobelinu</p>
+                          </div>
+                          {isQuickAnalyzing && (
+                             <div className="flex items-center gap-2 text-amber-600 font-bold text-xs animate-pulse">
+                                <RefreshCw className="animate-spin" size={14} /> AI Analizuje Foto...
+                             </div>
+                          )}
+                        </div>
+                        
+                        <MockupGenerator
+                          formData={formData}
+                          generationMode={generationMode}
+                          referenceBg={referenceBg}
+                          photoScore={0}
+                          photoSuggestions={quickSuggestions}
+                          selectedInspiration={selectedInspiration}
+                          inspirations={inspirations}
+                          onSelectInspiration={setSelectedInspiration}
+                          onAddImage={(img) => setFormData(prev => ({ ...prev, images: [...prev.images, img] }))}
+                        />
+                      </div>
+                      
+                      {/* Hint to generate full strategy */}
+                      <div className="bg-amber-50 border border-amber-200 p-8 rounded-[32px] text-center">
+                        <Sparkles size={32} className="mx-auto text-amber-500 mb-4" />
+                        <h4 className="text-lg font-bold text-stone-900 mb-2">Chcesz dostać tytuły, tagi i opis SEO?</h4>
+                        <p className="text-stone-600 text-sm mb-6 max-w-md mx-auto">Kliknij przycisk "Generuj Strategię Etsy" po lewej stronie, aby AI przygotowało kompletny listing.</p>
+                      </div>
                     </div>
                   ) : (
                     <div className="h-[calc(100vh-200px)] border-4 border-dashed border-stone-200/60 rounded-[32px] bg-stone-100/30 flex flex-col items-center justify-center text-center p-12">
