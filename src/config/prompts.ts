@@ -171,10 +171,13 @@ GOAL: Perfect physical integration of IMAGE 1 into IMAGE 2.`;
   return `TASK: Generate a HYPER-REALISTIC 4K photograph of an interior. 
 Place the tapestry from IMAGE 1 as the main focal point in the room.
 
+PRODUCT FIDELITY (SACRED):
+- IMAGE 1 is the actual physical product. Its weaving pattern, frame, and texture must remain UNCHANGED.
+- Do not add "AI artistic effects" to the product. It must look identical to IMAGE 1.
+
 COMPOSITION:
 - SETTING: ${suggestion}
-- SINGLE LAYER: No virtual frames.
-- SHADOWS: Realistic contact shadows.
+- SHADOWS: Realistic contact shadows on the wall behind the product.
 - QUALITY: Cinematic lighting, 4K resolution.`;
 };
 

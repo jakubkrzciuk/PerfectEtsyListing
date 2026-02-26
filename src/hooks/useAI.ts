@@ -273,15 +273,27 @@ export const useAI = (options: UseAIOptions = {}) => {
       const base64Data = imageData.split(',')[1];
       const mimeType = imageData.match(/data:([^;]+);base64,/)?.[1] || 'image/jpeg';
 
+      // Dynamic context boosting based on user prompt
+      const isLightingChange = /light|lamp|candle|sun|night|day|shadow|bright|dark|światło|lampa|dzień|noc|cień/i.test(editInstructions);
+      const isProductRelated = /product|tapestry|hanging|art|weaving|gobelen|produkt|sztuka|tkanina/i.test(editInstructions);
+
+      const contextBoosters = [];
+      if (isLightingChange) contextBoosters.push("ANALYSIS: Technical lighting overhaul required. Check all visible light sources and recalculate global illumination and shadows.");
+      if (isProductRelated) contextBoosters.push("ANALYSIS: High-precision product edit. Maintain exact weaving micro-textures and material properties of the original tapestry.");
+
       const contents = [
         { inlineData: { mimeType, data: base64Data } },
-        { text: `IMAGE EDITING TASK: ${editInstructions}\n\nMaintain original product placement and size. Focus only on the requested environmental changes.` }
+        { text: `IMAGE EDITING TASK: ${editInstructions}\n\n${contextBoosters.join('\n')}` }
       ];
 
       const result: any = await retryOperation(
         () => ai.models.generateContent({
           model: AI_MODELS.IMAGE_GENERATION,
           contents: [{ role: 'user', parts: contents }],
+          config: { 
+            systemInstruction: systemPrompt,
+            temperature: 0.4 // Slightly lower for better preservation of structure
+          }
         }),
         { maxRetries: 2, delay: 2000 }
       );

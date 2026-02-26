@@ -112,6 +112,7 @@ const App: React.FC = () => {
       id: Date.now().toString(),
       name: formData.name || 'Bez nazwy',
       title: result.title,
+      titleSegments: result.titleSegments,
       description: result.description,
       tags: result.tags,
       altText: result.altText || '',
@@ -134,6 +135,7 @@ const App: React.FC = () => {
   const handleLoadFromHistory = (item: HistoryItem) => {
     const loadedResult: GeneratedContent = {
       title: item.title,
+      titleSegments: item.titleSegments,
       description: item.description || '',
       tags: item.tags,
       altText: item.altText || '',
@@ -162,7 +164,7 @@ const App: React.FC = () => {
   return (
     <div className="flex min-h-screen bg-[#f8f7f4]">
       {/* Sidebar Navigation */}
-      <aside className="w-20 lg:w-64 bg-stone-900 text-white flex flex-col p-4 fixed h-full z-30 transition-all duration-300">
+      <aside className="w-20 lg:w-64 bg-stone-900 text-white hidden md:flex flex-col p-4 fixed h-full z-30 transition-all duration-300">
         <div className="flex items-center gap-3 px-2 mb-10 overflow-hidden">
           <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/20">
             <span className="font-bold text-xl italic">L</span>
@@ -226,8 +228,40 @@ const App: React.FC = () => {
         </div>
       </aside>
 
+      {/* Bottom Navigation - Mobile */}
+      <nav className="fixed bottom-0 left-0 right-0 h-20 bg-stone-900 border-t border-stone-800 flex items-center justify-around px-4 z-50 md:hidden">
+        <button
+          onClick={() => setActiveTab('generator')}
+          className={`flex flex-col items-center gap-1.5 ${activeTab === 'generator' ? 'text-amber-500' : 'text-stone-500'}`}
+        >
+          <Layers size={22} />
+          <span className="text-[10px] font-black uppercase">Studio</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('social')}
+          className={`flex flex-col items-center gap-1.5 ${activeTab === 'social' ? 'text-rose-500' : 'text-stone-500'}`}
+        >
+          <Share2 size={22} />
+          <span className="text-[10px] font-black uppercase">Social</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('inspiracje')}
+          className={`flex flex-col items-center gap-1.5 ${activeTab === 'inspiracje' ? 'text-rose-400' : 'text-stone-500'}`}
+        >
+          <Heart size={22} />
+          <span className="text-[10px] font-black uppercase">Wnętrza</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('database')}
+          className={`flex flex-col items-center gap-1.5 ${activeTab === 'database' ? 'text-white' : 'text-stone-500'}`}
+        >
+          <History size={22} />
+          <span className="text-[10px] font-black uppercase">Historia</span>
+        </button>
+      </nav>
+
       {/* Main Container */}
-      <main className="flex-1 ml-20 lg:ml-64 p-6 lg:p-10">
+      <main className="flex-1 ml-0 md:ml-20 lg:ml-64 p-4 sm:p-6 lg:p-10 mb-20 md:mb-0">
         <div className="max-w-full mx-auto">
           {activeTab === 'generator' && (
             <div className="animate-fade-in">

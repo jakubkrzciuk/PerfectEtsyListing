@@ -185,10 +185,15 @@ export const MockupGenerator: React.FC<MockupGeneratorProps> = ({
     setIsEditingAI(true);
 
     try {
-      const systemPrompt = `You are a professional Interior Photographer and AI Editor.
-      TASK: Modify the existing scene according to user instructions.
-      CRITICAL: Do NOT move or resize the product on the wall. Only change lighting, environment, time of day, or colors of walls/furniture.
-      STYLE: Pinterest-ready, high-end photography.`;
+      const systemPrompt = `You are a professional Interior Photographer and AI Editor specialized in "Scene Overhauls".
+      
+      CORE INSTRUCTIONS:
+      1. PRODUCT PROTECTION: ABSOLUTE PRIORITY. The tapestry (product) on the wall MUST remain 100% identical in shape, weaving pattern, and size. Do not "hallucinate" new details on the product itself.
+      2. GLOBAL LIGHTING RE-RENDER: If the user asks for lighting changes (e.g., "turn off lights", "make it night", "sunbeams"), you MUST modify all light sources in the scene. 
+         - If user says "turn off lamp", the lamp object must look dark/unlit, and the primary light source for the room must change accordingly.
+         - Ensure realistic shadows reflecting the new lighting condition.
+      3. ENVIRONMENT ONLY: Only the background walls, floor, furniture, and lighting should change.
+      4. QUALITY: Hyper-realistic 4K, professional camera lens (35mm), cinematic depth of field.`;
 
       const editedUrl = await editImage(currentImage, aiEditPrompt, systemPrompt);
       setGeneratedImages(prev => ({ ...prev, [key]: editedUrl }));

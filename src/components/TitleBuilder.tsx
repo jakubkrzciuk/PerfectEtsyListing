@@ -24,9 +24,24 @@ export const TitleBuilder: React.FC<TitleBuilderProps> = ({
   const [separator, setSeparator] = useState<Separator>(' | ');
 
   // Local state for segments to allow real-time editing
-  const [segments, setSegments] = useState<TitleSegments>(
-    result.titleSegments || { hooks: '', features: '', vibe: '', name: '' }
-  );
+  const [segments, setSegments] = useState<TitleSegments>(() => {
+    if (result.titleSegments) return result.titleSegments;
+    
+    // Fallback: Try to parse from title if it exists
+    if (result.title && result.title.includes('|')) {
+        const parts = result.title.split('|').map(p => p.trim());
+        return {
+            hooks: parts[0] || '',
+            features: parts[1] || '',
+            vibe: parts[2] || '',
+            name: parts[3] || ''
+        };
+    }
+    return { hooks: '', features: '', vibe: '', name: '' };
+  });
+
+  // Track if we are initializing to avoid immediate parent update with empty data
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Construct final title from segments using selected separator
   const title = useMemo(() => {
@@ -39,17 +54,22 @@ export const TitleBuilder: React.FC<TitleBuilderProps> = ({
   useEffect(() => {
     if (result.titleSegments) {
       setSegments(result.titleSegments);
+      setIsInitialized(true);
+    } else if (result.title) {
+        setIsInitialized(true);
     }
-  }, [result.titleSegments]);
+  }, [result.titleSegments, result.title]);
 
   // Update parent in real-time
   useEffect(() => {
+    if (!isInitialized) return;
+
     onUpdate({
       ...result,
       title: title,
       titleSegments: segments
     });
-  }, [title, segments]);
+  }, [title, segments, isInitialized]);
 
   const handleSegmentChange = (key: keyof TitleSegments, value: string) => {
     setSegments(prev => ({ ...prev, [key]: value }));

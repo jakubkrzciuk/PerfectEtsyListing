@@ -70,6 +70,7 @@ export interface HistoryItem {
   date: string;
   thumbnails: string[];
   title: string;
+  titleSegments?: TitleSegments;
   tags: string[];
   name: string;
   altText?: string;
