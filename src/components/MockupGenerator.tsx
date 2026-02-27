@@ -336,7 +336,8 @@ export const MockupGenerator: React.FC<MockupGeneratorProps> = ({
   const selectedPlacementObj = PLACEMENTS.find(p => p.id === selectedPlacement)!;
 
   return (
-    <div className="bg-white p-8 rounded-[32px] shadow-sm border border-stone-200 space-y-8 animate-fade-in group hover:shadow-xl transition-all duration-500">
+    <>
+      <div className="bg-white p-8 rounded-[32px] shadow-sm border border-stone-200 space-y-8 animate-fade-in group hover:shadow-xl transition-all duration-500">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-xl font-serif font-bold flex items-center gap-3">
@@ -807,5 +808,6 @@ export const MockupGenerator: React.FC<MockupGeneratorProps> = ({
         </div>
       </div>
     )}
+    </>
   );
 };

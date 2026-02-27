@@ -4,8 +4,8 @@
 // ============================================
 
 import React, { useRef, useState } from 'react';
-import { Image as ImageIcon, X, PlusCircle, Link as LinkIcon, Loader2, Search } from 'lucide-react';
-import { validateImageFile } from '../utils/imageProcessing';
+import { Image as ImageIcon, X, PlusCircle, Link as LinkIcon, Loader2, Search, Zap } from 'lucide-react';
+import { validateImageFile, resizeImage } from '../utils/imageProcessing';
 import { IMAGE_CONFIG } from '../config/constants';
 
 interface ImageUploaderProps {
@@ -26,6 +26,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   const [urlLoading, setUrlLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,7 +48,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       }
     }
 
-    // Convert all files to base64 in parallel, then add together
+    // Convert and COMPRESS all files
+    setIsProcessing(true);
     const readFile = (file: File): Promise<string> =>
       new Promise((resolve) => {
         const reader = new FileReader();
@@ -55,10 +57,19 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         reader.readAsDataURL(file);
       });
 
-    Promise.all(validFiles.map(readFile)).then(base64Array => {
-      onImagesChange([...images, ...base64Array]);
-      setError(null);
-    });
+    Promise.all(validFiles.map(readFile))
+      .then(async base64Array => {
+        const compressedArray = await Promise.all(
+          base64Array.map(async b64 => {
+            const processed = await resizeImage(b64);
+            return `data:image/jpeg;base64,${processed.data}`;
+          })
+        );
+        onImagesChange([...images, ...compressedArray]);
+        setError(null);
+      })
+      .catch(() => setError('Błąd podczas optymalizacji zdjęć'))
+      .finally(() => setIsProcessing(false));
 
     // Reset input
     if (fileInputRef.current) {
@@ -79,30 +90,60 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     setError(null);
 
     try {
-      let blob: Blob;
+      let blob: Blob | null = null;
+      
+      const proxies = [
+        (u: string) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+        (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+        (u: string) => `https://thingproxy.freeboard.io/fetch/${u}`,
+        (u: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`
+      ];
 
-      // Try direct fetch first
+      // Try direct fetch
       try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('Direct fetch failed');
-        blob = await response.blob();
-      } catch {
-        // Fallback to CORS proxy
-        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
-        const response = await fetch(proxyUrl);
-        if (!response.ok) throw new Error('Proxy fetch failed');
-        blob = await response.blob();
+        const res = await fetch(url, { mode: 'cors' });
+        if (res.ok) blob = await res.blob();
+      } catch (e) {
+        console.log('Direct fetch blocked by CORS, trying proxies...');
+      }
+
+      // Try proxies if direct failed
+      if (!blob) {
+        for (const getProxyUrl of proxies) {
+          try {
+            const res = await fetch(getProxyUrl(url));
+            if (res.ok) {
+              blob = await res.blob();
+              break;
+            }
+          } catch (e) {
+            continue;
+          }
+        }
+      }
+
+      if (!blob) {
+        throw new Error('Strona blokuje dostęp do tego zdjęcia. Spróbuj zapisać je na dysku i wgrać jako plik.');
       }
 
       if (!blob.type.startsWith('image/')) {
-        throw new Error('To nie jest obraz');
+        throw new Error('Link nie prowadzi bezpośrednio do zdjęcia (sprawdź czy kończy się na .jpg lub .png)');
       }
 
       const reader = new FileReader();
-      reader.onloadend = () => {
-        onImagesChange([...images, reader.result as string]);
-        setUrlLoading(false);
-        setUrlInput('');
+      reader.onloadend = async () => {
+        const base64 = reader.result as string;
+        setIsProcessing(true);
+        try {
+          const processed = await resizeImage(base64);
+          onImagesChange([...images, `data:image/jpeg;base64,${processed.data}`]);
+          setUrlInput('');
+        } catch {
+          setError('Błąd optymalizacji zdjęcia z URL');
+        } finally {
+          setIsProcessing(false);
+          setUrlLoading(false);
+        }
       };
       reader.readAsDataURL(blob);
     } catch (err) {
@@ -199,8 +240,19 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
             onClick={() => fileInputRef.current?.click()}
             className="relative w-full h-40 rounded-lg border-2 border-dashed border-stone-300 
                      bg-stone-50 flex flex-col items-center justify-center cursor-pointer 
-                     hover:bg-stone-100 hover:border-amber-400 transition-colors"
+                     hover:bg-stone-100 hover:border-amber-400 transition-colors group overflow-hidden"
           >
+            {isProcessing && (
+              <div className="absolute inset-0 bg-stone-900/5 backdrop-blur-[2px] flex flex-col items-center justify-center animate-fade-in z-10">
+                <div className="bg-white p-4 rounded-2xl shadow-xl flex items-center gap-3">
+                  <Loader2 className="animate-spin text-amber-500" size={20} />
+                  <div className="text-left">
+                    <p className="text-xs font-black uppercase tracking-widest text-stone-900">Optymalizacja...</p>
+                    <p className="text-[10px] text-stone-500">Zmniejszamy wagę dla Vercel</p>
+                  </div>
+                </div>
+              </div>
+            )}
             <ImageIcon className="mx-auto mb-2 text-stone-400" size={32} />
             <span className="text-sm text-stone-500 font-medium">
               Kliknij lub przeciągnij zdjęcia
@@ -239,21 +291,20 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         </div>
       )}
 
+      {inputMode === 'url' && (
+        <div className="mt-2 space-y-2">
+            <p className="text-[10px] text-stone-400 italic">
+                💡 Wskazówka: Kliknij prawym przyciskiem na zdjęcie w internecie i wybierz "Kopiuj adres obrazu". Link powinien kończyć się na .jpg, .png lub .webp.
+            </p>
+        </div>
+      )}
+
       {error && (
-        <p className="mt-2 text-red-500 text-xs flex items-center gap-1">
-          <span className="inline-block w-1 h-1 bg-red-500 rounded-full" />
+        <p className="mt-2 text-red-500 text-[11px] font-bold flex items-center gap-2 bg-red-50 p-2 rounded-lg border border-red-100">
+          <span className="inline-block w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
           {error}
         </p>
       )}
-
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileSelect}
-        className="hidden"
-        accept="image/*"
-        multiple
-      />
     {/* ===== LIGHTBOX MODAL ===== */}
     {previewImage && (
       <div 

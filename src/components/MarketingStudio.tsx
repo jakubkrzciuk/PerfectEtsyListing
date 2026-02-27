@@ -207,132 +207,135 @@ export const MarketingStudio: React.FC<MarketingStudioProps> = ({ mainImage, pro
 
                 {/* Left Toolbar - Controls */}
                 <div className="xl:col-span-4 space-y-6 sm:space-y-8 h-full order-2 xl:order-1 px-1 sm:px-0">
-                        {/* Canvas Labels */}
-                        <div className="absolute top-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-white/80 backdrop-blur-md px-6 py-2.5 rounded-full border border-stone-200 shadow-sm transition-all group-hover/canvas:translate-y-1">
-                            <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                                <span className="text-[9px] font-black uppercase tracking-widest text-stone-600">Live 4K Preview</span>
-                            </div>
-                            <div className="w-px h-3 bg-stone-200" />
-                            <span className="text-[9px] font-bold text-stone-400 uppercase tracking-widest">{currentTemplate.name} ({currentTemplate.aspect.replace('aspect-', '').replace('[', '').replace(']', '').replace('/', ':')})</span>
+                    {/* 1. Wybór Formatu */}
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h4 className="text-[11px] font-black uppercase tracking-widest text-stone-900 flex items-center gap-2">
+                                <Layout size={14} className="text-amber-500" /> 01. Format Projektu
+                            </h4>
+                            <span className="text-[9px] font-bold text-stone-400 bg-stone-100 px-2 py-0.5 rounded-full uppercase">Social Engine</span>
                         </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            {TEMPLATES.map(t => (
+                                <button
+                                    key={t.id}
+                                    onClick={() => setSelectedTemplate(t.id)}
+                                    className={`flex items-center gap-3 p-3 rounded-2xl border transition-all text-left group ${selectedTemplate === t.id
+                                            ? 'bg-stone-900 border-stone-900 text-white shadow-lg ring-4 ring-stone-900/5'
+                                            : 'bg-white border-stone-100 text-stone-600 hover:border-stone-300'
+                                        }`}
+                                >
+                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${selectedTemplate === t.id ? 'bg-white/20' : 'bg-stone-50 group-hover:bg-amber-50 group-hover:text-amber-600'}`}>
+                                        {t.icon}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] font-black leading-tight truncate">{t.name}</p>
+                                        <p className="text-[8px] opacity-60 font-bold uppercase tracking-tighter">{t.aspect.replace('aspect-', '').replace('[', '').replace(']', '').replace('/', ':')}</p>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
 
-                        {/* The Graphic Canvas */}
-                        <div
-                            ref={studioRef}
-                            className={`relative shadow-[0_50px_100px_-20px_rgba(0,0,0,0.3)] overflow-hidden bg-white max-w-[340px] w-full transition-all duration-700 ease-[cubic-bezier(0.23, 1, 0.32, 1)] ${currentTemplate.aspect}`}
-                        >
-                            {/* Main Image Layer */}
-                            <div className="absolute inset-0 transition-all duration-700 overflow-hidden">
-                                <img
-                                    src={mainImage}
-                                    className="absolute inset-0 w-full h-full object-cover scale-105 group-hover/canvas:scale-100 transition-transform duration-1000"
-                                    style={currentFilter.style}
-                                    alt="Base"
+                    {/* 2. Typografia */}
+                    <div className="space-y-4">
+                        <h4 className="text-[11px] font-black uppercase tracking-widest text-stone-900 flex items-center gap-2">
+                            <Type size={14} className="text-rose-500" /> 02. Typografia
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                            {FONTS.map(f => (
+                                <button
+                                    key={f.id}
+                                    onClick={() => setSelectedFont(f.id)}
+                                    className={`px-4 py-2.5 rounded-xl border text-[10px] font-bold transition-all ${selectedFont === f.id
+                                            ? 'bg-rose-500 border-rose-500 text-white shadow-md'
+                                            : 'bg-white border-stone-100 text-stone-600 hover:border-stone-200'
+                                        } ${f.class}`}
+                                >
+                                    {f.name}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* 3. Edycja Treści */}
+                    <div className="space-y-4 bg-stone-50 p-6 rounded-[24px] border border-stone-100">
+                        <h4 className="text-[11px] font-black uppercase tracking-widest text-stone-900 flex items-center gap-2 mb-4">
+                            <Palette size={14} className="text-amber-500" /> 03. Personalizacja
+                        </h4>
+                        
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-1.5 block">Nagłówek Główny</label>
+                                <input
+                                    type="text"
+                                    value={headline}
+                                    onChange={(e) => setHeadline(e.target.value)}
+                                    className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-xs font-bold focus:ring-2 focus:ring-amber-500/20 outline-none transition-all"
+                                    placeholder="Wpisz hasło..."
                                 />
-                                {/* Global Overlay (Darken) */}
-                                <div className="absolute inset-0 bg-black transition-opacity duration-300" style={{ opacity: overlayOpacity }} />
                             </div>
-
-                            {/* PLATFORM SPECIFIC DESIGNS */}
-
-                            {/* 1. PINTEREST DESIGN */}
-                            {selectedTemplate === 'pinterest_classic' && (
-                                <div className="absolute inset-0 flex flex-col justify-end p-8 text-white z-20">
-                                    <div className="bg-white/10 backdrop-blur-sm border-l-2 border-amber-500 p-6 transform translate-y-0 group-hover/canvas:-translate-y-2 transition-transform duration-500">
-                                        <p className={`text-[10px] uppercase font-black tracking-[0.3em] mb-4 opacity-70 ${FONTS.find(f => f.id === 'sans')?.class}`}>Lale Studio Heritage</p>
-                                        <h2 className={`text-3xl leading-tight mb-4 ${currentFont.animation || ''} ${currentFont.class}`}>{headline}</h2>
-                                        <div className="flex items-center justify-between">
-                                            <p className="text-[10px] font-medium opacity-80 uppercase tracking-wider">{subline}</p>
-                                            {showPrice && <span className="text-amber-400 font-bold text-xs">{price}</span>}
-                                        </div>
-                                    </div>
+                            <div>
+                                <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-1.5 block">Podtytuł</label>
+                                <input
+                                    type="text"
+                                    value={subline}
+                                    onChange={(e) => setSubline(e.target.value)}
+                                    className="w-full bg-white border border-stone-200 rounded-xl px-4 py-3 text-xs font-medium focus:ring-2 focus:ring-amber-500/20 outline-none transition-all"
+                                    placeholder="Opis krótki..."
+                                />
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4 pt-2">
+                                <div>
+                                    <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-1.5 block flex items-center justify-between">
+                                        Przyciemnienie <span>{Math.round(overlayOpacity * 100)}%</span>
+                                    </label>
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="0.8"
+                                        step="0.05"
+                                        value={overlayOpacity}
+                                        onChange={(e) => setOverlayOpacity(parseFloat(e.target.value))}
+                                        className="w-full accent-stone-900"
+                                    />
                                 </div>
-                            )}
-
-                            {/* 2. INSTA STORY DESIGN */}
-                            {selectedTemplate === 'insta_story' && (
-                                <div className="absolute inset-0 flex flex-col items-center justify-between p-12 text-white z-20">
-                                    <div className="text-center">
-                                        <div className="w-12 h-12 border border-white/30 rounded-full flex items-center justify-center mx-auto mb-4 bg-white/5 backdrop-blur-md">
-                                            <Sparkles size={20} className="text-amber-400" />
-                                        </div>
-                                        <p className="text-[9px] uppercase font-black tracking-[0.4em] opacity-60">Handmade Excellence</p>
-                                    </div>
-
-                                    <div className="text-center w-full">
-                                        <h2 className={`text-4xl leading-none mb-6 drop-shadow-2xl ${currentFont.class}`}>{headline}</h2>
-                                        <div className="h-0.5 w-12 bg-white/40 mx-auto mb-6" />
-                                        <p className="text-[11px] font-black uppercase tracking-[0.2em]">{subline}</p>
-                                    </div>
-
-                                    <div className="w-full">
-                                        <button className="w-full py-4 bg-white text-stone-900 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl">
-                                            Shop The Collection
-                                        </button>
-                                    </div>
+                                <div className="flex items-center justify-end gap-2 pt-4">
+                                    <span className="text-[9px] font-black text-stone-500 uppercase">Cena</span>
+                                    <button 
+                                        onClick={() => setShowPrice(!showPrice)}
+                                        className={`w-10 h-5 rounded-full transition-colors relative ${showPrice ? 'bg-amber-500' : 'bg-stone-300'}`}
+                                    >
+                                        <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${showPrice ? 'right-1' : 'left-1'}`} />
+                                    </button>
                                 </div>
-                            )}
-
-                            {/* 3. INSTA POST DESIGN (Square) */}
-                            {selectedTemplate === 'insta_post' && (
-                                <div className="absolute inset-0 flex items-center justify-center p-8 z-20">
-                                    <div className="bg-white p-8 shadow-2xl relative group-hover/canvas:translate-y-2 transition-transform duration-700">
-                                        <div className="absolute -top-3 -left-3 w-10 h-10 border-t-2 border-l-2 border-stone-900" />
-                                        <div className="absolute -bottom-3 -right-3 w-10 h-10 border-b-2 border-r-2 border-stone-900" />
-                                        <p className="text-[8px] uppercase font-black tracking-widest text-stone-400 mb-2">Lale Studio Selection</p>
-                                        <h2 className={`text-2xl font-bold text-stone-900 mb-4 ${currentFont.class}`}>{headline}</h2>
-                                        <p className="text-[10px] text-stone-600 font-medium leading-relaxed mb-6">{subline}</p>
-                                        <div className="flex items-center justify-between pt-4 border-t border-stone-100">
-                                            <span className="text-[9px] font-black text-rose-500 uppercase">Available Now</span>
-                                            {showPrice && <span className="text-[11px] font-bold text-stone-900">{price}</span>}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* 4. FACEBOOK LANDSCAPE DESIGN */}
-                            {selectedTemplate === 'fb_post' && (
-                                <div className="absolute inset-0 flex items-center z-20">
-                                    <div className="bg-white/10 backdrop-blur-xl border-y border-white/20 w-full py-6 px-10 text-white">
-                                        <div className="flex justify-between items-center">
-                                            <div className="max-w-[180px]">
-                                                <h2 className={`text-xl font-bold mb-1 leading-tight ${currentFont.class}`}>{headline}</h2>
-                                                <p className="text-[9px] font-medium opacity-70">{subline}</p>
-                                            </div>
-                                            <div className="text-right">
-                                                {showPrice && <p className="text-sm font-bold text-amber-400 mb-1">{price}</p>}
-                                                <div className="text-[8px] font-black uppercase tracking-widest px-3 py-1.5 bg-white text-stone-900 rounded-md">Learn More</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* 5. BRAND CLEAN DESIGN */}
-                            {selectedTemplate === 'brand_clean' && (
-                                <>
-                                    <div className="absolute top-10 inset-x-0 flex flex-col items-center text-white z-20">
-                                        <p className="text-[9px] font-black uppercase tracking-[0.5em] mb-4 drop-shadow-md">Lale Studio</p>
-                                        <div className="w-8 h-px bg-white/50" />
-                                    </div>
-                                    <div className="absolute bottom-12 left-10 text-white z-20">
-                                        <h2 className={`text-4xl font-bold drop-shadow-2xl leading-none mb-3 ${currentFont.class}`}>{headline}</h2>
-                                        <p className="text-xs opacity-80 uppercase tracking-widest drop-shadow-md font-medium">{subline}</p>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-
-                        {/* Canvas Helpers Overlay */}
-                        <div className="absolute bottom-10 inset-x-0 flex justify-center gap-3">
-                            <div className="bg-stone-900/5 backdrop-blur-lg border border-white p-2 rounded-2xl flex items-center gap-1 shadow-sm">
-                                <button onClick={() => setOverlayOpacity(prev => Math.max(0, prev - 0.1))} className="p-2 hover:bg-white rounded-xl transition-colors"><Maximize size={14} className="text-stone-600" /></button>
-                                <button className="p-2 hover:bg-white rounded-xl transition-colors"><MousePointer2 size={14} className="text-stone-600" /></button>
-                                <button className="p-2 hover:bg-white rounded-xl transition-colors"><Layers size={14} className="text-stone-600" /></button>
-                                <button className="p-2 hover:bg-white rounded-xl transition-colors"><Settings2 size={14} className="text-stone-600" /></button>
                             </div>
                         </div>
+
+                        {/* 4. Filtry i Efekty */}
+                        <div className="pt-6 mt-6 border-t border-stone-200">
+                             <div className="flex flex-wrap gap-2">
+                                {FILTERS.map(f => (
+                                    <button
+                                        key={f.id}
+                                        onClick={() => setSelectedFilter(f.id)}
+                                        className={`px-3 py-1.5 rounded-lg border text-[9px] font-black transition-all uppercase tracking-tighter ${selectedFilter === f.id
+                                                ? 'bg-stone-900 border-stone-900 text-white'
+                                                : 'bg-white border-stone-100 text-stone-400 hover:text-stone-600 hover:border-stone-200'
+                                            }`}
+                                    >
+                                        {f.name}
+                                    </button>
+                                ))}
+                             </div>
+                        </div>
+                    </div>
+
+                    <div className="pt-2">
+                        <button className="w-full bg-stone-900 text-white p-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-black hover:shadow-xl transition-all group">
+                            <Download size={18} className="group-hover:translate-y-0.5 transition-transform" /> Pobierz Kolekcję .ZIP
+                        </button>
                     </div>
                 </div>
             </div>

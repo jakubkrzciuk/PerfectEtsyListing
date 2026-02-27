@@ -86,7 +86,10 @@ export const useAI = (options: UseAIOptions = {}) => {
       const contents: any[] = images.map(img => ({
         inlineData: { mimeType: img.mimeType, data: img.data }
       }));
-      contents.push({ text: `Generate Best Seller Listing for: ${productName}` });
+      contents.push({ text: `Generate a Best Seller Listing Strategy for: ${productName}. 
+      CRITICAL: Analyze the attached images for colors, textures, and specific weaving patterns. 
+      Use this visual evidence to ensure the title and description are UNIQUE and SPECIFIC to this exact item. 
+      Avoid repetitive generic openings.` });
 
       const result: any = await retryOperation(
         () => ai.models.generateContent({

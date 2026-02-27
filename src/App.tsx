@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Sparkles, Database, RefreshCw, Settings, Info,
+  Sparkles, Database, RefreshCw, Settings, Info, Layers,
   Wand2, Trash2, Plus, CheckCircle2, Circle, LogOut, User, Heart, Layout, History, Image as ImageIcon, Share2
 } from 'lucide-react';
 import type {
@@ -18,7 +18,8 @@ import type {
 } from './types';
 import {
   ProductForm,
-  ResultsPanel
+  ResultsPanel,
+  MockupGenerator
 } from './components';
 import { LoginPage } from './components/LoginPage';
 import { InspirationsTab } from './components/InspirationsTab';
@@ -221,8 +222,8 @@ const App: React.FC = () => {
             className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${activeTab === 'database' ? 'bg-amber-500 text-stone-900 font-bold shadow-lg shadow-amber-500/10' : 'text-stone-400 hover:text-white hover:bg-stone-800'}`}
           >
             <History size={20} />
-            <span className="hidden lg:inline text-sm">Historia</span>
-            <span className="hidden lg:inline ml-auto text-[10px] bg-stone-800 text-stone-500 px-1.5 py-0.5 rounded-full">{savedItems.length}</span>
+            <span className="hidden lg:inline text-sm">Twoje Portfolio</span>
+            <span className="hidden lg:inline ml-auto text-[10px] bg-stone-800 text-stone-500 px-1.5 py-0.5 rounded-full">{savedItems?.length || 0}</span>
           </button>
 
           <button
@@ -257,7 +258,7 @@ const App: React.FC = () => {
           onClick={() => setActiveTab('generator')}
           className={`flex flex-col items-center gap-1.5 ${activeTab === 'generator' ? 'text-amber-500' : 'text-stone-500'}`}
         >
-          <Layers size={22} />
+          <Sparkles size={22} />
           <span className="text-[10px] font-black uppercase">Studio</span>
         </button>
         <button
@@ -279,7 +280,7 @@ const App: React.FC = () => {
           className={`flex flex-col items-center gap-1.5 ${activeTab === 'database' ? 'text-white' : 'text-stone-500'}`}
         >
           <History size={22} />
-          <span className="text-[10px] font-black uppercase">Historia</span>
+          <span className="text-[10px] font-black uppercase">Portfolio</span>
         </button>
       </nav>
 
@@ -430,14 +431,14 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              {savedItems.length === 0 ? (
+              {(!savedItems || savedItems.length === 0) ? (
                 <div className="py-32 text-center bg-white rounded-[32px] border border-stone-200">
                   <Database size={48} className="mx-auto text-stone-200 mb-4" />
                   <p className="text-stone-400">Baza jest pusta. Wygeneruj i zapisz swój pierwszy listing!</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {savedItems.map(item => (
+                  {savedItems?.map(item => (
                     <div key={item.id} className="premium-card group overflow-hidden">
                       <div className="aspect-video relative overflow-hidden bg-stone-100">
                         {item.thumbnails?.[0] ? (
