@@ -92,6 +92,12 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     try {
       let blob: Blob | null = null;
       
+      // Validation: Check if it's a known product page instead of an image
+      const isProductPage = /etsy\.com\/listing|pinterest\.com\/pin|amazon\.|allegro\./i.test(url);
+      if (isProductPage && !url.match(/\.(jpg|jpeg|png|webp|avif)/i)) {
+        throw new Error('Wkleiłeś link do STRONY produktu, a nie do SAMEGO ZDJĘCIA. Kliknij PRAWYM PRZYCISKIEM na zdjęcie i wybierz "Kopiuj adres obrazu".');
+      }
+
       const proxies = [
         (u: string) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
         (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
@@ -101,17 +107,23 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
 
       // Try direct fetch
       try {
-        const res = await fetch(url, { mode: 'cors' });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const res = await fetch(url, { mode: 'cors', signal: controller.signal });
+        clearTimeout(timeoutId);
         if (res.ok) blob = await res.blob();
       } catch (e) {
-        console.log('Direct fetch blocked by CORS, trying proxies...');
+        console.log('Direct fetch blocked or timed out, trying proxies...');
       }
 
       // Try proxies if direct failed
       if (!blob) {
         for (const getProxyUrl of proxies) {
           try {
-            const res = await fetch(getProxyUrl(url));
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000);
+            const res = await fetch(getProxyUrl(url), { signal: controller.signal });
+            clearTimeout(timeoutId);
             if (res.ok) {
               blob = await res.blob();
               break;
@@ -123,11 +135,12 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       }
 
       if (!blob) {
-        throw new Error('Strona blokuje dostęp do tego zdjęcia. Spróbuj zapisać je na dysku i wgrać jako plik.');
+        throw new Error('Wszystkie próby pobrania zdjęcia zawiodły. Strona blokuje dostęp. Najlepiej zapisz zdjęcie na dysku i przeciągnij je tutaj.');
       }
 
-      if (!blob.type.startsWith('image/')) {
-        throw new Error('Link nie prowadzi bezpośrednio do zdjęcia (sprawdź czy kończy się na .jpg lub .png)');
+      const contentType = blob.type;
+      if (!contentType.startsWith('image/')) {
+        throw new Error(`Podany link nie jest obrazem (typ: ${contentType}). Upewnij się, że kopiujesz "Adres obrazu".`);
       }
 
       const reader = new FileReader();
