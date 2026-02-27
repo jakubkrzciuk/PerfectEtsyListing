@@ -89,9 +89,10 @@ export const RETRY_CONFIG = {
 // ============================================
 
 export const SEO_REQUIREMENTS = {
-  TITLE_MIN_LENGTH: 132,
+  TITLE_MIN_LENGTH: 120,
   TITLE_MAX_LENGTH: 140,
   DESC_MIN_LENGTH: 1000,
   TAGS_COUNT: 13,
-  MAX_DUPLICATE_TAGS: 3
+  MAX_DUPLICATE_TAGS: 3,
+  MAX_KEYWORD_REPETITION: 2
 } as const;

@@ -27,6 +27,17 @@ export const buildListingSystemPrompt = (
 4. NO REPETITION: Do not repeat the same keyword (e.g. 'Tapestry', 'Boho') more than twice in the title. Avoid keyword stuffing.
 5. Visual-First: Describe what you actually SEE in the photos (textures, exact color shades, specific weaving patterns).
 
+=== SCORING RULES (FOR AI) ===
+Your performance is measured by these metrics (HIT 100/100):
+1. Title Length (20 pts): 120-140 chars.
+2. Description Depth (15 pts): 1000+ chars.
+3. Tag Count (15 pts): Exactly 13 tags.
+4. Mobile Optimization (15 pts): First 4 words MUST be high-value power keywords (no soft words like 'Handmade', 'Beautiful').
+5. Variety (15 pts): No word remains repeated more than twice.
+6. Cleanliness (5 pts): No excessive punctuation or ALL CAPS.
+7. Identity (5 pts): End with the specific product name.
+8. Meta-Harmony (10 pts): Tags must be unique and relevant.
+
 === PRODUCT INPUT ===
 - Name: ${formData.name}
 - Material: ${formData.material}
@@ -49,8 +60,14 @@ Analyze provided images deeply. Identify:
 STEP 2 - TITLE (English):
 - Structure: [Specific Visual Hook] | [Material & Craft] | [Interior Vibe/Room] | [Product Name]
 - Length: 125-140 characters.
-- CRITICAL: Do NOT repeat the same "Power Keywords" at the beginning of every title. If the tapestry is modern, start with modern terms. If it's heavy texture, start with texture.
+- CRITICAL: Start with unique visual details from the photo. Do NOT repeat the same "Power Keywords" at the beginning of every title.
 - Use words that describe the VISUALS of the yarn and patterns seen in IMAGE 1.
+- NO KEYWORD STUFFING: Maximum 2 occurrences per word.
+
+STEP 2.5 - SEARCH INTENT MAPPING (in Polish):
+For each major keyword used in Step 2, you MUST justify its presence:
+- CATEGORY: Is it for 'Broad Traffic' (Wall Art), 'High Conversion' (Geometric Woven Tapestry), or 'Niche Discovery' (Japandi Bedroom Decor)?
+- IMPACT: Why did you pick THIS exact phrase for this specific photo?
 
 STEP 3 - DESCRIPTION (English):
 - Minimum 1000 characters.
@@ -78,6 +95,9 @@ Return ONLY valid JSON:
   "description": "string",
   "marketAnalysis": "string (Polish)",
   "keywordStrategy": "string (Polish)",
+  "keywordAnalysis": [
+    { "keyword": "string", "intent": "high_conversion|broad_traffic|niche_discovery", "potential": "high|medium|low", "explanation": "string (Polish)" }
+  ],
   "visualStyle": "string",
   "visualDescription": "string",
   "photoScore": number,

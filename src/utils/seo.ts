@@ -16,47 +16,62 @@ export const analyzeSeo = (
   const title = result.title?.trim() || '';
   const desc = result.description?.trim() || '';
   const tags = result.tags || [];
-  const name = productName.trim();
+  const name = productName.trim().toLowerCase();
   
-  // Check requirements
+  // 1. Basic Length Checks
   const titleLengthOk = title.length >= SEO_REQUIREMENTS.TITLE_MIN_LENGTH && 
                         title.length <= SEO_REQUIREMENTS.TITLE_MAX_LENGTH;
   const descLengthOk = desc.length >= SEO_REQUIREMENTS.DESC_MIN_LENGTH;
   const tagCountOk = tags.length === SEO_REQUIREMENTS.TAGS_COUNT;
-  const nameAtEndOk = title.toLowerCase().endsWith(name.toLowerCase());
+  const nameAtEndOk = title.toLowerCase().endsWith(name);
   
-  // Check keyword strength in first 4 words
-  const first4Words = title
-    .toLowerCase()
-    .replace(/[^a-z0-9 ]/g, '')
-    .split(' ')
-    .slice(0, 4);
-  
+  // 2. Keyword Start Check (Critical for Mobile)
+  const words = title.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 2);
+  const first4Words = words.slice(0, 4);
   let strongWordsCount = 0;
   first4Words.forEach(word => {
-    if (word.length < 3) return;
     const isPower = powerKeywords.some(pk => pk.toLowerCase().includes(word));
     if (isPower) strongWordsCount++;
   });
   const keywordStartOk = strongWordsCount >= 2;
+
+  // 3. Variety Check (Anti-Repetition)
+  const wordCounts: Record<string, number> = {};
+  const repeatedKeywords: string[] = [];
+  words.forEach(word => {
+    // Ignore common stop words
+    if (['and', 'the', 'with', 'for', 'from'].includes(word)) return;
+    wordCounts[word] = (wordCounts[word] || 0) + 1;
+    if (wordCounts[word] > SEO_REQUIREMENTS.MAX_KEYWORD_REPETITION && !repeatedKeywords.includes(word)) {
+      repeatedKeywords.push(word);
+    }
+  });
+  const varietyOk = repeatedKeywords.length === 0;
+
+  // 4. Punctuation & Spam Check
+  const excessivePunctuation = (title.match(/[!?,;:]{2,}/g) || []).length > 0;
+  const tooManyCaps = (title.match(/[A-Z]{4,}/g) || []).length > 0;
+  const punctuationOk = !excessivePunctuation && !tooManyCaps;
   
-  // Find duplicate tags in title
+  // 5. Duplicate Tags in Title Check
   const duplicates: string[] = [];
   tags.forEach(tag => {
-    if (title.toLowerCase().includes(tag.toLowerCase())) {
+    if (tag.length > 3 && title.toLowerCase().includes(tag.toLowerCase())) {
       duplicates.push(tag);
     }
   });
   const uniqueTagsOk = duplicates.length <= SEO_REQUIREMENTS.MAX_DUPLICATE_TAGS;
   
-  // Calculate score
+  // Calculate score (out of 100)
   let score = 0;
-  if (titleLengthOk) score += 25;
-  if (descLengthOk) score += 20;
+  if (titleLengthOk) score += 20;
+  if (descLengthOk) score += 15;
   if (tagCountOk) score += 15;
-  if (nameAtEndOk) score += 10;
+  if (nameAtEndOk) score += 5;
   if (keywordStartOk) score += 15;
-  if (uniqueTagsOk) score += 15;
+  if (varietyOk) score += 15;
+  if (punctuationOk) score += 5;
+  if (uniqueTagsOk) score += 10;
   
   return {
     score: Math.max(0, Math.min(100, score)),
@@ -66,9 +81,12 @@ export const analyzeSeo = (
       tagCount: tagCountOk,
       nameAtEnd: nameAtEndOk,
       keywordStart: keywordStartOk,
-      uniqueTags: uniqueTagsOk
+      uniqueTags: uniqueTagsOk,
+      variety: varietyOk,
+      punctuation: punctuationOk
     },
-    duplicates
+    duplicates,
+    repeatedKeywords
   };
 };
 

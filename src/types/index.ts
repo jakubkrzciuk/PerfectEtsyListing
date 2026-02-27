@@ -40,6 +40,13 @@ export interface TitleSegments {
   name: string;
 }
 
+export interface KeywordAnalysis {
+  keyword: string;
+  intent: 'high_conversion' | 'broad_traffic' | 'niche_discovery';
+  potential: 'high' | 'medium' | 'low';
+  explanation: string;
+}
+
 export interface GeneratedContent {
   title: string;
   titleSegments?: TitleSegments;
@@ -49,6 +56,7 @@ export interface GeneratedContent {
   description: string;
   marketAnalysis: string;
   keywordStrategy: string;
+  keywordAnalysis?: KeywordAnalysis[];
   visualStyle: string;
   visualDescription: string;
   photoScore: number;
@@ -79,6 +87,7 @@ export interface HistoryItem {
   description?: string;
   marketAnalysis?: string;
   keywordStrategy?: string;
+  keywordAnalysis?: KeywordAnalysis[];
   visualStyle?: string;
   visualDescription?: string;
   photoScore?: number;
@@ -99,8 +108,11 @@ export interface SeoAnalysis {
     nameAtEnd: boolean;
     keywordStart: boolean;
     uniqueTags: boolean;
+    variety: boolean;
+    punctuation: boolean;
   };
   duplicates: string[];
+  repeatedKeywords: string[];
 }
 
 export interface ProcessedImage {

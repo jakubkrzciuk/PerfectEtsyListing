@@ -47,7 +47,7 @@ export const SeoScore: React.FC<SeoScoreProps> = ({ analysis }) => {
       <div className="grid grid-cols-2 gap-3 text-xs">
         <CheckItem 
           passed={analysis.checks.titleLength}
-          label={`Tytuł (132-140 znaków)`}
+          label="Tytuł (120-140 znaków)"
         />
         <CheckItem 
           passed={analysis.checks.descLength}
@@ -58,26 +58,42 @@ export const SeoScore: React.FC<SeoScoreProps> = ({ analysis }) => {
           label="13 tagów"
         />
         <CheckItem 
-          passed={analysis.checks.nameAtEnd}
-          label="Nazwa na końcu"
+          passed={analysis.checks.variety}
+          label="Brak spamu słownego"
         />
         <CheckItem 
           passed={analysis.checks.keywordStart}
-          label="Słowa kluczowe na początku"
+          label="Mocny start (Mobile)"
         />
         <CheckItem 
           passed={analysis.checks.uniqueTags}
-          label={`Unikalne tagi (${analysis.duplicates.length} duplikatów)`}
+          label="Ekskluzywne tagi"
+        />
+        <CheckItem 
+          passed={analysis.checks.punctuation}
+          label="Czysty tytuł (bez Caps)"
+        />
+        <CheckItem 
+          passed={analysis.checks.nameAtEnd}
+          label="Nazwa na końcu"
         />
       </div>
 
-      {/* Duplicates Warning */}
-      {analysis.duplicates.length > 3 && (
-        <div className="mt-4 p-2 bg-red-900/30 text-red-300 text-[10px] rounded">
-          <span className="font-bold">Uwaga:</span> Masz {analysis.duplicates.length} tagów w tytule. 
-          Etsy rekomenduje max 3.
-        </div>
-      )}
+      {/* Warning Area */}
+      <div className="mt-4 space-y-2">
+        {analysis.repeatedKeywords.length > 0 && (
+          <div className="p-2 bg-red-900/30 text-red-300 text-[10px] rounded flex items-start gap-2 border border-red-800/30">
+            <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+            <span>Spam (powtórzenia): {analysis.repeatedKeywords.join(', ')}</span>
+          </div>
+        )}
+        {analysis.duplicates.length > 3 && (
+          <div className="p-2 bg-amber-900/30 text-amber-300 text-[10px] rounded flex items-start gap-2 border border-amber-800/30">
+            <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+            <span>Duplikacja tagów: {analysis.duplicates.length} tagów powtórzonych w tytule.</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

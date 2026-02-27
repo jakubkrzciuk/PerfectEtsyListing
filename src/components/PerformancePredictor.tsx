@@ -140,6 +140,51 @@ export const PerformancePredictor: React.FC<PerformancePredictorProps> = ({
                     </div>
                 </div>
             </div>
+
+            {/* Intent Analysis - NEW SECTION */}
+            <div className="bg-white rounded-[32px] p-8 border border-stone-200 shadow-sm mt-8">
+                <div className="flex items-center justify-between mb-8">
+                    <div>
+                        <h4 className="text-xl font-bold text-stone-900 font-serif lowercase tracking-tighter">Strategia SEO (Analiza Intencji)</h4>
+                        <p className="text-sm text-stone-500 italic">Dlaczego te słowa? Sprawdź mapowanie intencji zakupowej.</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {result.keywordAnalysis?.map((ka, idx) => (
+                        <div key={idx} className="bg-stone-50 rounded-2xl p-6 border border-stone-100 flex flex-col justify-between group hover:border-amber-200 transition-all">
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-black text-stone-900 bg-white px-3 py-1 rounded-lg border border-stone-200 shadow-sm">{ka.keyword}</span>
+                                    <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-widest ${
+                                        ka.potential === 'high' ? 'bg-green-100 text-green-700' : 
+                                        ka.potential === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-stone-200 text-stone-600'
+                                    }`}>
+                                        {ka.potential} impact
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className={`w-2 h-2 rounded-full ${
+                                        ka.intent === 'high_conversion' ? 'bg-rose-500' : 
+                                        ka.intent === 'broad_traffic' ? 'bg-blue-500' : 'bg-emerald-500'
+                                    }`} />
+                                    <span className="text-[10px] font-bold text-stone-400 uppercase tracking-tighter">
+                                        {ka.intent.replace('_', ' ')}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-stone-600 leading-relaxed">
+                                    {ka.explanation}
+                                </p>
+                            </div>
+                        </div>
+                    ))}
+                    {(!result.keywordAnalysis || result.keywordAnalysis.length === 0) && (
+                        <div className="col-span-full py-12 text-center text-stone-400 italic text-sm">
+                            Generuj listing, aby zobaczyć głęboką analizę słów kluczowych.
+                        </div>
+                    )}
+                </div>
+            </div>
         </div>
     );
 };
